@@ -1,0 +1,13 @@
+
+CAMERA_DEVICE = "/dev/video4"
+
+FRAME_WIDTH = 1296
+FRAME_HEIGHT = 1032
+FRAME_FORMAT = "GRAY8"
+
+DATA_ROOT = "/root/scripts/data"
+LOG_ROOT = "/root/scripts/logs"
+
+FRAME_RATE = 24
+EXPOSURE_TIME_ABSOLUTE = 20000
+GAIN = 0
