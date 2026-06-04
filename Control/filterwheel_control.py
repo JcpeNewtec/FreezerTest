@@ -133,3 +133,61 @@ class FilterwheelController:
 
     def return_to_zero(self):
         self.move_to_position(0)
+    
+    def home_with_hall(
+        self,
+        is_hall_active,
+        search_direction: int = -1,
+        fast_step: int = 10,
+        slow_step: int = 1,
+        max_steps: int = 3000,
+    ):
+        if search_direction not in (-1, 1):
+            raise FilterwheelError("search_direction must be -1 or 1.")
+    
+        print("Starting Hall homing...")
+    
+        start_position = self.get_current_position()
+        travelled = 0
+    
+        # If currently on the magnet, first move away until inactive.
+        while is_hall_active():
+            current = self.get_current_position()
+            target = current - search_direction * fast_step
+            self.move_to_position(target)
+            travelled += abs(fast_step)
+    
+            if travelled > max_steps:
+                raise FilterwheelError("Homing failed while moving away from Hall sensor.")
+    
+        # Move toward the magnet quickly until active.
+        travelled = 0
+        while not is_hall_active():
+            current = self.get_current_position()
+            target = current + search_direction * fast_step
+            self.move_to_position(target)
+            travelled += abs(fast_step)
+    
+            if travelled > max_steps:
+                raise FilterwheelError(
+                    f"Homing failed: Hall sensor not found. Started at {start_position}."
+                )
+    
+        # Back out until inactive again.
+        while is_hall_active():
+            current = self.get_current_position()
+            target = current - search_direction * slow_step
+            self.move_to_position(target)
+    
+        # Slowly approach final edge.
+        while not is_hall_active():
+            current = self.get_current_position()
+            target = current + search_direction * slow_step
+            self.move_to_position(target)
+    
+        edge_position = self.get_current_position()
+        print(f"Hall edge found at motor position {edge_position}")
+    
+        self.set_zero_here()
+        print("Filterwheel home set to 0.")
+        return edge_position

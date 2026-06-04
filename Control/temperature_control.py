@@ -8,6 +8,7 @@ Created on Wed Apr 22 10:32:15 2026
 
 from datetime import datetime
 
+
 from uldaq import (
     DaqDevice,
     get_net_daq_device_descriptor,
@@ -20,6 +21,9 @@ from uldaq import (
 )
 
 from Config.temperature_config import HOST, PORT, IFACE, CHANNEL_CONFIG
+from Config.system_config import HALL_DIO_BIT, HALL_ACTIVE_STATE
+
+DIO_PORT = DigitalPortType.AUXPORT0
 
 LAMP_DIO_PORT = DigitalPortType.AUXPORT0
 LAMP_DIO_BIT = 0
@@ -49,6 +53,7 @@ class TemperatureController:
         self.ai_config = None
         self.dio_device = None
         self.lamp_state = False
+        
 
     def connect(self):
         desc = get_net_daq_device_descriptor(self.host, self.port, self.iface, 5.0)
@@ -60,10 +65,19 @@ class TemperatureController:
 
         for ch, cfg in self.channel_config.items():
             self.ai_config.set_chan_tc_type(ch, tc_type_from_string(cfg["tc_type"]))
+            
+        self.dio_device = self.daq_device.get_dio_device()
+        self.dio_device.d_config_bit(DIO_PORT, HALL_DIO_BIT, DigitalDirection.INPUT)
         
         self.dio_device = self.daq_device.get_dio_device()
         self.dio_device.d_config_bit(LAMP_DIO_PORT, LAMP_DIO_BIT, DigitalDirection.OUTPUT)
         self.lamp_off()
+        
+    def read_hall_raw(self) -> int:
+        return self.dio_device.d_bit_in(DIO_PORT, HALL_DIO_BIT)
+
+    def is_hall_active(self) -> bool:
+        return self.read_hall_raw() == HALL_ACTIVE_STATE
    
     def lamp_on(self):
         self.dio_device.d_bit_out(LAMP_DIO_PORT, LAMP_DIO_BIT, 1)

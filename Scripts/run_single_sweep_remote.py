@@ -22,6 +22,11 @@ from Config.system_config import (
     REMOTE_CAPTURE_SCRIPT,
     REMOTE_DATA_ROOT,
     LOCAL_DATA_ROOT,
+    FILTERWHEEL_HOME_ENABLED,
+    FILTERWHEEL_HOME_SEARCH_DIRECTION,
+    FILTERWHEEL_HOME_FAST_STEP,
+    FILTERWHEEL_HOME_SLOW_STEP,
+    FILTERWHEEL_HOME_MAX_STEPS,
 )
 
 
@@ -112,6 +117,8 @@ def run_single_sweep(
     trigger_reason: str = "time_interval",
     temperature_before_sweep: dict | None = None,
     temperature_after_sweep: dict | None = None,
+    hall_reader=None,
+    home_filterwheel: bool = False,
 ):
     run_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     sweep_name = f"sweep_{sweep_index:04d}_{run_timestamp}"
@@ -158,6 +165,28 @@ def run_single_sweep(
 
         print("Initializing filterwheel...")
         filterwheel.initialize(set_zero_here=False)
+        
+        if home_filterwheel:
+            if hall_reader is None:
+                raise RuntimeError("home_filterwheel=True but no hall_reader was provided.")
+        
+            home_edge_position = filterwheel.home_with_hall(
+                is_hall_active=hall_reader,
+                search_direction=FILTERWHEEL_HOME_SEARCH_DIRECTION,
+                fast_step=FILTERWHEEL_HOME_FAST_STEP,
+                slow_step=FILTERWHEEL_HOME_SLOW_STEP,
+                max_steps=FILTERWHEEL_HOME_MAX_STEPS,
+            )
+        
+            sweep_summary["homing"] = {
+                "enabled": True,
+                "home_edge_position_before_zero": home_edge_position,
+                "search_direction": FILTERWHEEL_HOME_SEARCH_DIRECTION,
+                "fast_step": FILTERWHEEL_HOME_FAST_STEP,
+                "slow_step": FILTERWHEEL_HOME_SLOW_STEP,
+            }
+        else:
+            sweep_summary["homing"] = {"enabled": False}
 
         for filter_number in sorted(FILTER_POSITIONS.keys()):
             print(f"Moving to filter {filter_number}...")

@@ -15,6 +15,7 @@ from Config.system_config import (
     RETRY_DELAY_SECONDS,
     MAX_CONSECUTIVE_FAILURES,
     MINIMUM_FREE_GB,
+    FILTERWHEEL_HOME_ENABLED,
 )
 
 def check_storage(path: Path, minimum_free_gb: float = MINIMUM_FREE_GB):
@@ -136,6 +137,9 @@ def main():
                         trigger_reason="time_interval",
                         temperature_before_sweep=temperature_before_sweep,
                         temperature_after_sweep=None,
+                        hall_reader=temp_logger.is_hall_active,
+                        home_filterwheel=FILTERWHEEL_HOME_ENABLED,
+                        
                     )
                 finally:
                     print("Turning lamp OFF...")

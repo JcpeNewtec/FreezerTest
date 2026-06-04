@@ -58,6 +58,12 @@ class TemperatureLogger:
     def get_latest_record(self):
         with self._lock:
             return self._latest_record
+    
+    def is_hall_active(self) -> bool:
+        with self._lock:
+            if self._controller is None:
+                raise RuntimeError("TemperatureLogger is not running.")
+            return self._controller.is_hall_active()
 
     def _run_loop(self):
         while not self._stop_event.is_set():
