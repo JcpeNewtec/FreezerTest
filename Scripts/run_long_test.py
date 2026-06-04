@@ -4,9 +4,9 @@ import time
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from run_single_sweep_remote import run_single_sweep
-from temperature_logger import TemperatureLogger
-from system_config import (
+from Scripts.run_single_sweep_remote import run_single_sweep
+from Control.temperature_logger import TemperatureLogger
+from Config.system_config import (
     LOCAL_DATA_ROOT,
     TEST_NAME,
     TEST_DURATION_HOURS,
@@ -124,14 +124,22 @@ def main():
             try:
                 print(f"\nStarting sweep {sweep_index}...")
                 temperature_before_sweep = temp_logger.get_latest_record()
-
-                local_run_dir = run_single_sweep(
-                    test_root_dir=test_root_dir,
-                    sweep_index=sweep_index,
-                    trigger_reason="time_interval",
-                    temperature_before_sweep=temperature_before_sweep,
-                    temperature_after_sweep=None,
-                )
+                
+                print("Turning lamp ON...")
+                lamp_on_record = temp_logger.lamp_on()
+                time.sleep(1.0)
+                
+                try:
+                    local_run_dir = run_single_sweep(
+                        test_root_dir=test_root_dir,
+                        sweep_index=sweep_index,
+                        trigger_reason="time_interval",
+                        temperature_before_sweep=temperature_before_sweep,
+                        temperature_after_sweep=None,
+                    )
+                finally:
+                    print("Turning lamp OFF...")
+                    lamp_off_record = temp_logger.lamp_off()
 
                 temperature_after_sweep = temp_logger.get_latest_record()
 
@@ -149,7 +157,9 @@ def main():
                 event["status"] = "success"
                 event["local_run_dir"] = str(local_run_dir)
                 event["sweep_summary_path"] = str(sweep_summary_path)
-
+                event["lamp_on_record"] = lamp_on_record
+                event["lamp_off_record"] = lamp_off_record
+                
                 consecutive_failures = 0
                 test_summary["completed_sweeps"] += 1
 

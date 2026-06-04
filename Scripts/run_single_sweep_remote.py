@@ -4,8 +4,8 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-from filterwheel_control import FilterwheelController
-from system_config import (
+from Control.filterwheel_control import FilterwheelController
+from Config.system_config import (
     TIC_SERIAL,
     FILTER_POSITIONS,
     FILTERWHEEL_STEP_MODE,
@@ -30,7 +30,14 @@ def iso_now():
 
 
 def run_ssh(command: list[str], timeout: int = 30) -> subprocess.CompletedProcess:
-    ssh_cmd = ["ssh", f"{CAMERA_USER}@{CAMERA_IP}"] + command
+    ssh_cmd = [
+        "ssh",
+        "-o", "BatchMode=yes",
+        "-o", "ConnectTimeout=5",
+        "-o", "ServerAliveInterval=5",
+        "-o", "ServerAliveCountMax=2",
+        f"{CAMERA_USER}@{CAMERA_IP}",
+    ] + command
     result = subprocess.run(ssh_cmd, capture_output=True, text=True, timeout=timeout)
     if result.returncode != 0:
         raise RuntimeError(
@@ -60,9 +67,11 @@ def copy_remote_dir_to_local(remote_dir: str, local_dir: Path):
 
     cmd = [
         "scp",
+        "-o", "BatchMode=yes",
+        "-o", "ConnectTimeout=5",
         "-r",
         f"{CAMERA_USER}@{CAMERA_IP}:{remote_dir}",
-        str(local_dir.parent)
+        str(local_dir.parent),
     ]
 
     result = subprocess.run(cmd, capture_output=True, text=True)
@@ -77,7 +86,7 @@ def copy_remote_dir_to_local(remote_dir: str, local_dir: Path):
 
 def expected_sweep_files(run_timestamp: str) -> list[str]:
     files = []
-    for filter_number in range(1, 9):
+    for filter_number in sorted(FILTER_POSITIONS.keys()):
         files.append(f"{run_timestamp}_filter_{filter_number}.png")
         files.append(f"{run_timestamp}_filter_{filter_number}.json")
     files.append("sweep_summary.json")
@@ -150,7 +159,7 @@ def run_single_sweep(
         print("Initializing filterwheel...")
         filterwheel.initialize(set_zero_here=False)
 
-        for filter_number in range(1, 9):
+        for filter_number in sorted(FILTER_POSITIONS.keys()):
             print(f"Moving to filter {filter_number}...")
             target_position = filterwheel.move_to_filter(filter_number)
             actual_position = filterwheel.get_current_position()

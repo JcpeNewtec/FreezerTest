@@ -15,7 +15,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-from temperature_control import TemperatureController
+from Control.temperature_control import TemperatureController
 
 
 class TemperatureLogger:
@@ -48,6 +48,10 @@ class TemperatureLogger:
             self._thread.join(timeout=5.0)
 
         if self._controller is not None:
+            try:
+                self._controller.lamp_off()
+            except Exception:
+                pass
             self._controller.disconnect()
             self._controller = None
 
@@ -81,3 +85,19 @@ class TemperatureLogger:
                     f.write(json.dumps(error_record) + "\n")
 
             time.sleep(self.interval_s)
+            
+    def lamp_on(self):
+        with self._lock:
+            if self._controller is None:
+                raise RuntimeError("TemperatureLogger is not running.")
+            self._controller.lamp_on()
+            self._latest_record = self._controller.read_all()
+            return self._latest_record
+    
+    def lamp_off(self):
+        with self._lock:
+            if self._controller is None:
+                raise RuntimeError("TemperatureLogger is not running.")
+            self._controller.lamp_off()
+            self._latest_record = self._controller.read_all()
+            return self._latest_record

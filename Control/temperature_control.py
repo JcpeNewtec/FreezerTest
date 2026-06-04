@@ -15,10 +15,14 @@ from uldaq import (
     TcType,
     TInFlag,
     ULException,
+    DigitalDirection,
+    DigitalPortType,
 )
 
-from temperature_config import HOST, PORT, IFACE, CHANNEL_CONFIG
+from Config.temperature_config import HOST, PORT, IFACE, CHANNEL_CONFIG
 
+LAMP_DIO_PORT = DigitalPortType.AUXPORT0
+LAMP_DIO_BIT = 0
 
 def tc_type_from_string(name: str):
     mapping = {
@@ -43,6 +47,8 @@ class TemperatureController:
         self.daq_device = None
         self.ai_device = None
         self.ai_config = None
+        self.dio_device = None
+        self.lamp_state = False
 
     def connect(self):
         desc = get_net_daq_device_descriptor(self.host, self.port, self.iface, 5.0)
@@ -54,9 +60,26 @@ class TemperatureController:
 
         for ch, cfg in self.channel_config.items():
             self.ai_config.set_chan_tc_type(ch, tc_type_from_string(cfg["tc_type"]))
+        
+        self.dio_device = self.daq_device.get_dio_device()
+        self.dio_device.d_config_bit(LAMP_DIO_PORT, LAMP_DIO_BIT, DigitalDirection.OUTPUT)
+        self.lamp_off()
+   
+    def lamp_on(self):
+        self.dio_device.d_bit_out(LAMP_DIO_PORT, LAMP_DIO_BIT, 1)
+        self.lamp_state = True
+
+    def lamp_off(self):
+        self.dio_device.d_bit_out(LAMP_DIO_PORT, LAMP_DIO_BIT, 0)
+        self.lamp_state = False
 
     def disconnect(self):
         if self.daq_device:
+            try:
+                self.lamp_off()
+            except Exception:
+                pass
+            
             try:
                 self.daq_device.disconnect()
             except Exception:
@@ -78,6 +101,7 @@ class TemperatureController:
             "timestamp": timestamp,
             "temperatures_c": {},
             "errors": {},
+            "lamp_state": self.lamp_state,
         }
 
         for ch, cfg in self.channel_config.items():

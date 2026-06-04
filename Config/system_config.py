@@ -1,14 +1,10 @@
 TIC_SERIAL = None
 
 FILTER_POSITIONS = {
-    1: 0,
-    2: 200,
-    3: 400,
-    4: 600,
-    5: 800,
-    6: 1000,
-    7: 1200,
-    8: 1400,
+    1: -315,
+    2: -115,
+    3: 85,
+    4: 286,
 }
 
 FILTERWHEEL_STEP_MODE = 8
@@ -26,7 +22,7 @@ CAMERA_USER = "root"
 REMOTE_CAPTURE_SCRIPT = "/root/scripts/capture_remote.py"
 REMOTE_DATA_ROOT = "/root/scripts/data"
 
-LOCAL_DATA_ROOT = "/media/jcpe/KINGSTON/Freezertest_Data"
+LOCAL_DATA_ROOT = "/home/jcpe/Documents/Projects /FreezerTestSetup/Test_Results"
 
 
 TEST_NAME = "freezer_test"

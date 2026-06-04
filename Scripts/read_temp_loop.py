@@ -10,7 +10,7 @@ import json
 import time
 from pathlib import Path
 
-from temperature_control import TemperatureController
+from Control.temperature_control import TemperatureController
 
 LOG_PATH = Path("temperature_log.jsonl")
 INTERVAL_S = 1.0

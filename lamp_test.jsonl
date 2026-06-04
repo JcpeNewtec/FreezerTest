@@ -1,0 +1,6 @@
+{"timestamp": "2026-06-03T14:28:40", "temperatures_c": {"probe_1": 24.944643020629883}, "errors": {}, "lamp_state": false, "logger_timestamp": "2026-06-03T14:28:40"}
+{"timestamp": "2026-06-03T14:28:41", "temperatures_c": {"probe_1": 24.895925521850586}, "errors": {}, "lamp_state": true, "logger_timestamp": "2026-06-03T14:28:41"}
+{"timestamp": "2026-06-03T14:28:42", "temperatures_c": {"probe_1": 24.97950553894043}, "errors": {}, "lamp_state": true, "logger_timestamp": "2026-06-03T14:28:42"}
+{"timestamp": "2026-06-03T14:49:14", "temperatures_c": {"probe_1": 25.322790145874023}, "errors": {}, "lamp_state": false, "logger_timestamp": "2026-06-03T14:49:14"}
+{"timestamp": "2026-06-03T14:49:15", "temperatures_c": {"probe_1": 25.499448776245117}, "errors": {}, "lamp_state": true, "logger_timestamp": "2026-06-03T14:49:15"}
+{"timestamp": "2026-06-03T14:49:16", "temperatures_c": {"probe_1": 25.512407302856445}, "errors": {}, "lamp_state": true, "logger_timestamp": "2026-06-03T14:49:16"}
