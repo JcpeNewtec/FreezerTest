@@ -41,3 +41,14 @@ MAX_SWEEPS = 5
 RETRY_DELAY_SECONDS = 30
 MAX_CONSECUTIVE_FAILURES = 3
 MINIMUM_FREE_GB = 5.0
+
+# Default exposure if a filter has no specific value
+DEFAULT_EXPOSURE_TIME_ABSOLUTE = 20000
+
+# Per-filter exposure settings.
+FILTER_EXPOSURE_TIME_ABSOLUTE = {
+    1: 3000,
+    2: 10000,
+    3: 25000,
+    4: 20000,
+}

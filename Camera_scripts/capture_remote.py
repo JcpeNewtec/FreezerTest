@@ -15,9 +15,13 @@ from camera_control import CameraController
 
 def main():
     if len(sys.argv) < 2:
-        raise RuntimeError("Usage: capture_remote.py <output_path>")
+        raise RuntimeError("Usage: capture_remote.py <output_path> [exposure_time_absolute]")
 
     output_file = Path(sys.argv[1])
+
+    exposure_time_absolute = EXPOSURE_TIME_ABSOLUTE
+    if len(sys.argv) >= 3:
+        exposure_time_absolute = int(sys.argv[2])
 
     camera = CameraController(
         device=CAMERA_DEVICE,
@@ -25,13 +29,16 @@ def main():
         height=FRAME_HEIGHT,
         pixel_format=FRAME_FORMAT,
         frame_rate=FRAME_RATE,
-        exposure_time_absolute=EXPOSURE_TIME_ABSOLUTE,
+        exposure_time_absolute=exposure_time_absolute,
         gain=GAIN,
     )
 
     image_path, metadata_path = camera.capture_png_frame(
         output_file,
-        extra_metadata={"capture_type": "remote_trigger"}
+        extra_metadata={
+            "capture_type": "remote_trigger",
+            "requested_exposure_from_cli": exposure_time_absolute,
+        }
     )
 
     print(image_path)

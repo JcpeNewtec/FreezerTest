@@ -27,6 +27,8 @@ from Config.system_config import (
     FILTERWHEEL_HOME_FAST_STEP,
     FILTERWHEEL_HOME_SLOW_STEP,
     FILTERWHEEL_HOME_MAX_STEPS,
+    DEFAULT_EXPOSURE_TIME_ABSOLUTE,
+    FILTER_EXPOSURE_TIME_ABSOLUTE,
 )
 
 
@@ -54,8 +56,13 @@ def run_ssh(command: list[str], timeout: int = 30) -> subprocess.CompletedProces
     return result
 
 
-def remote_capture(remote_output_path: str):
-    result = run_ssh(["python3", REMOTE_CAPTURE_SCRIPT, remote_output_path], timeout=60)
+def remote_capture(remote_output_path: str, exposure_time_absolute: int | None = None):
+    command = ["python3", REMOTE_CAPTURE_SCRIPT, remote_output_path]
+
+    if exposure_time_absolute is not None:
+        command.append(str(exposure_time_absolute))
+
+    result = run_ssh(command, timeout=60)
     return result.stdout.strip()
 
 
@@ -119,6 +126,9 @@ def run_single_sweep(
     temperature_after_sweep: dict | None = None,
     hall_reader=None,
     home_filterwheel: bool = False,
+    lamp_on_callback=None,
+    lamp_off_callback=None,
+    lamp_warmup_s: float = 1,
 ):
     run_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     sweep_name = f"sweep_{sweep_index:04d}_{run_timestamp}"
@@ -184,24 +194,57 @@ def run_single_sweep(
             }
         else:
             sweep_summary["homing"] = {"enabled": False}
+            
+        lamp_was_turned_on = False
+        
+        if lamp_on_callback is not None:
+            print("Turning lamp ON for image capture...")
+            lamp_on_callback()
+            lamp_was_turned_on = True
+            time.sleep(lamp_warmup_s)
+        
+        sweep_summary["lamp"] = {
+            "controlled_by_sweep": lamp_on_callback is not None,
+            "warmup_s": lamp_warmup_s,
+            "on_before_first_capture": lamp_was_turned_on,
+        }
 
-        for filter_number in sorted(FILTER_POSITIONS.keys()):
-            print(f"Moving to filter {filter_number}...")
-            target_position = filterwheel.move_to_filter(filter_number)
-            actual_position = filterwheel.get_current_position()
-
-            remote_image_path = f"{remote_run_dir}/{run_timestamp}_filter_{filter_number}.png"
-
-            print(f"Capturing image for filter {filter_number}...")
-            remote_capture(remote_image_path)
-
-            sweep_summary["filters"].append({
-                "filter_number": filter_number,
-                "target_position": target_position,
-                "actual_position": actual_position,
-                "remote_image_path": remote_image_path,
-                "remote_metadata_path": remote_image_path.replace(".png", ".json"),
-            })
+        try:
+            for filter_number in sorted(FILTER_POSITIONS.keys()):
+                print(f"Moving to filter {filter_number}...")
+                target_position = filterwheel.move_to_filter(filter_number)
+                actual_position = filterwheel.get_current_position()
+        
+                exposure_time_absolute = FILTER_EXPOSURE_TIME_ABSOLUTE.get(
+                    filter_number,
+                    DEFAULT_EXPOSURE_TIME_ABSOLUTE,
+                )
+        
+                remote_image_path = f"{remote_run_dir}/{run_timestamp}_filter_{filter_number}.png"
+        
+                print(
+                    f"Capturing image for filter {filter_number} "
+                    f"with exposure {exposure_time_absolute}..."
+                )
+                remote_capture(
+                    remote_image_path,
+                    exposure_time_absolute=exposure_time_absolute,
+                )
+        
+                sweep_summary["filters"].append({
+                    "filter_number": filter_number,
+                    "target_position": target_position,
+                    "actual_position": actual_position,
+                    "exposure_time_absolute": exposure_time_absolute,
+                    "remote_image_path": remote_image_path,
+                    "remote_metadata_path": remote_image_path.replace(".png", ".json"),
+                })
+        
+        finally:
+            if lamp_was_turned_on and lamp_off_callback is not None:
+                print("Turning lamp OFF after final capture...")
+                lamp_off_callback()
+                sweep_summary["lamp"]["off_after_capture"] = True
 
         print("Returning filterwheel to zero...")
         filterwheel.return_to_zero()

@@ -126,24 +126,18 @@ def main():
                 print(f"\nStarting sweep {sweep_index}...")
                 temperature_before_sweep = temp_logger.get_latest_record()
                 
-                print("Turning lamp ON...")
-                lamp_on_record = temp_logger.lamp_on()
-                time.sleep(1.0)
-                
-                try:
-                    local_run_dir = run_single_sweep(
-                        test_root_dir=test_root_dir,
-                        sweep_index=sweep_index,
-                        trigger_reason="time_interval",
-                        temperature_before_sweep=temperature_before_sweep,
-                        temperature_after_sweep=None,
-                        hall_reader=temp_logger.is_hall_active,
-                        home_filterwheel=FILTERWHEEL_HOME_ENABLED,
-                        
-                    )
-                finally:
-                    print("Turning lamp OFF...")
-                    lamp_off_record = temp_logger.lamp_off()
+                local_run_dir = run_single_sweep(
+                    test_root_dir=test_root_dir,
+                    sweep_index=sweep_index,
+                    trigger_reason="time_interval",
+                    temperature_before_sweep=temperature_before_sweep,
+                    temperature_after_sweep=None,
+                    hall_reader=temp_logger.is_hall_active,
+                    home_filterwheel=FILTERWHEEL_HOME_ENABLED,
+                    lamp_on_callback=temp_logger.lamp_on,
+                    lamp_off_callback=temp_logger.lamp_off,
+                    lamp_warmup_s=0.2,
+                )
 
                 temperature_after_sweep = temp_logger.get_latest_record()
 
@@ -161,8 +155,6 @@ def main():
                 event["status"] = "success"
                 event["local_run_dir"] = str(local_run_dir)
                 event["sweep_summary_path"] = str(sweep_summary_path)
-                event["lamp_on_record"] = lamp_on_record
-                event["lamp_off_record"] = lamp_off_record
                 
                 consecutive_failures = 0
                 test_summary["completed_sweeps"] += 1
