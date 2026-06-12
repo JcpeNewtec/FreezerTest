@@ -22,6 +22,10 @@ from Config.system_config import (
     FILTERWHEEL_POSITION_TOLERANCE,
     FILTERWHEEL_SETTLE_TIME_S,
     FILTERWHEEL_MOVE_TIMEOUT_S,
+    FILTERWHEEL_HOME_SEARCH_DIRECTION,
+    FILTERWHEEL_HOME_FAST_STEP,
+    FILTERWHEEL_HOME_SLOW_STEP,
+    FILTERWHEEL_HOME_MAX_STEPS,
 )
 
 try:
@@ -38,6 +42,7 @@ def print_help():
     print("""
 Commands:
   p                 show current motor position
+  home              run Hall sensor homing and set position to 0
   g <pos>           go to absolute position, e.g. g 600
   j <steps>         jog relative steps, e.g. j 10 or j -10
   f <1-8>           go to configured filter position
@@ -121,6 +126,23 @@ def main():
                 positions[filt] = current
                 fw.filter_positions = positions
                 print(f"Saved filter {filt} = {current}")
+                
+            elif cmd[0] == "home":
+                if lamp is None:
+                    print("Hall reader unavailable because TemperatureLogger is not running.")
+                    continue
+
+                homing_result = fw.home_with_hall(
+                    is_hall_active=lamp.is_hall_active,
+                    search_direction=FILTERWHEEL_HOME_SEARCH_DIRECTION,
+                    fast_step=FILTERWHEEL_HOME_FAST_STEP,
+                    slow_step=FILTERWHEEL_HOME_SLOW_STEP,
+                    max_steps=FILTERWHEEL_HOME_MAX_STEPS,
+                )
+
+                print("Homing complete:")
+                print(json.dumps(homing_result, indent=4))
+                print(f"Current position after homing: {fw.get_current_position()}")
 
             elif cmd[0] == "l" and len(cmd) == 2:
                 if lamp is None:

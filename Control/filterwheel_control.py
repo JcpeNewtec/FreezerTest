@@ -138,56 +138,77 @@ class FilterwheelController:
         self,
         is_hall_active,
         search_direction: int = -1,
-        fast_step: int = 10,
-        slow_step: int = 1,
+        fast_step: int = 50,
+        slow_step: int = 2,
         max_steps: int = 3000,
     ):
         if search_direction not in (-1, 1):
             raise FilterwheelError("search_direction must be -1 or 1.")
-    
+
         print("Starting Hall homing...")
-    
+        t0 = time.monotonic()
+
         start_position = self.get_current_position()
-        travelled = 0
-    
-        # If currently on the magnet, first move away until inactive.
-        while is_hall_active():
+
+        def step_relative(delta: int):
             current = self.get_current_position()
-            target = current - search_direction * fast_step
+            target = current + delta
             self.move_to_position(target)
+            return self.get_current_position()
+
+        # Phase 1: if already on the magnet, move away until inactive.
+        travelled = 0
+        if is_hall_active():
+            print("Hall already active. Moving away from magnet...")
+        while is_hall_active():
+            step_relative(-search_direction * fast_step)
             travelled += abs(fast_step)
-    
             if travelled > max_steps:
                 raise FilterwheelError("Homing failed while moving away from Hall sensor.")
-    
-        # Move toward the magnet quickly until active.
+
+        # Phase 2: fast search toward magnet.
+        print("Fast search toward Hall edge...")
         travelled = 0
         while not is_hall_active():
-            current = self.get_current_position()
-            target = current + search_direction * fast_step
-            self.move_to_position(target)
+            step_relative(search_direction * fast_step)
             travelled += abs(fast_step)
-    
             if travelled > max_steps:
                 raise FilterwheelError(
                     f"Homing failed: Hall sensor not found. Started at {start_position}."
                 )
-    
-        # Back out until inactive again.
+
+        fast_hit_position = self.get_current_position()
+
+        # Phase 3: back away slowly until inactive.
+        print("Backing out of Hall active region...")
         while is_hall_active():
-            current = self.get_current_position()
-            target = current - search_direction * slow_step
-            self.move_to_position(target)
-    
-        # Slowly approach final edge.
+            step_relative(-search_direction * slow_step)
+
+        inactive_edge_position = self.get_current_position()
+
+        # Phase 4: final slow approach toward active edge.
+        print("Final slow approach to Hall edge...")
         while not is_hall_active():
-            current = self.get_current_position()
-            target = current + search_direction * slow_step
-            self.move_to_position(target)
-    
+            step_relative(search_direction * slow_step)
+
         edge_position = self.get_current_position()
-        print(f"Hall edge found at motor position {edge_position}")
-    
+
         self.set_zero_here()
+
+        homing_duration_s = time.monotonic() - t0
+        print(
+            f"Hall edge found at motor position {edge_position}. "
+            f"Homing duration: {homing_duration_s:.2f} s"
+        )
         print("Filterwheel home set to 0.")
-        return edge_position
+
+        return {
+            "start_position": start_position,
+            "fast_hit_position": fast_hit_position,
+            "inactive_edge_position": inactive_edge_position,
+            "edge_position_before_zero": edge_position,
+            "search_direction": search_direction,
+            "fast_step": fast_step,
+            "slow_step": slow_step,
+            "duration_s": round(homing_duration_s, 3),
+        }

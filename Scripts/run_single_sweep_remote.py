@@ -170,20 +170,17 @@ def run_single_sweep(
             if hall_reader is None:
                 raise RuntimeError("home_filterwheel=True but no hall_reader was provided.")
         
-            home_edge_position = filterwheel.home_with_hall(
+            homing_result = filterwheel.home_with_hall(
                 is_hall_active=hall_reader,
                 search_direction=FILTERWHEEL_HOME_SEARCH_DIRECTION,
                 fast_step=FILTERWHEEL_HOME_FAST_STEP,
                 slow_step=FILTERWHEEL_HOME_SLOW_STEP,
                 max_steps=FILTERWHEEL_HOME_MAX_STEPS,
             )
-        
+            
             sweep_summary["homing"] = {
                 "enabled": True,
-                "home_edge_position_before_zero": home_edge_position,
-                "search_direction": FILTERWHEEL_HOME_SEARCH_DIRECTION,
-                "fast_step": FILTERWHEEL_HOME_FAST_STEP,
-                "slow_step": FILTERWHEEL_HOME_SLOW_STEP,
+                **homing_result,
             }
         else:
             sweep_summary["homing"] = {"enabled": False}
