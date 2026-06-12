@@ -11,10 +11,10 @@ IFACE = None
 
 CHANNEL_CONFIG = {
     0: {"name": "probe_1", "tc_type": "K", "enabled": True},
-    1: {"name": "probe_2", "tc_type": "K", "enabled": False},
-    2: {"name": "probe_3", "tc_type": "K", "enabled": False},
-    3: {"name": "probe_4", "tc_type": "K", "enabled": False},
-    4: {"name": "probe_5", "tc_type": "K", "enabled": False},
+    1: {"name": "probe_2", "tc_type": "K", "enabled": True},
+    2: {"name": "probe_3", "tc_type": "K", "enabled": True},
+    3: {"name": "probe_4", "tc_type": "K", "enabled": True},
+    4: {"name": "probe_5", "tc_type": "K", "enabled": True},
     5: {"name": "probe_6", "tc_type": "K", "enabled": False},
     6: {"name": "probe_7", "tc_type": "K", "enabled": False},
     7: {"name": "probe_8", "tc_type": "K", "enabled": False},

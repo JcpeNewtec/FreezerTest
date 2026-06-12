@@ -48,7 +48,7 @@ DEFAULT_EXPOSURE_TIME_ABSOLUTE = 20000
 # Per-filter exposure settings.
 FILTER_EXPOSURE_TIME_ABSOLUTE = {
     1: 3000,
-    2: 10000,
-    3: 25000,
-    4: 20000,
+    2: 18000,
+    3: 8000,
+    4: 11000,
 }

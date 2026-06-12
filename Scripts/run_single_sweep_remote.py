@@ -128,7 +128,7 @@ def run_single_sweep(
     home_filterwheel: bool = False,
     lamp_on_callback=None,
     lamp_off_callback=None,
-    lamp_warmup_s: float = 1,
+    lamp_warmup_s: float = 2,
 ):
     run_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     sweep_name = f"sweep_{sweep_index:04d}_{run_timestamp}"
