@@ -31,13 +31,11 @@ CAMERA_USER = "root"
 REMOTE_CAPTURE_SCRIPT = "/root/scripts/capture_remote.py"
 REMOTE_DATA_ROOT = "/root/scripts/data"
 
-LOCAL_DATA_ROOT = "/home/jcpe/Documents/Projects /FreezerTestSetup/Test_Results"
-
 
 TEST_NAME = "freezer_test"
-TEST_DURATION_HOURS = 0.05
-SWEEP_INTERVAL_SECONDS = 20
-MAX_SWEEPS = 5
+TEST_DURATION_HOURS = 1.0
+SWEEP_INTERVAL_SECONDS = 180
+MAX_SWEEPS = 25
 RETRY_DELAY_SECONDS = 30
 MAX_CONSECUTIVE_FAILURES = 3
 MINIMUM_FREE_GB = 5.0
@@ -52,3 +50,9 @@ FILTER_EXPOSURE_TIME_ABSOLUTE = {
     3: 8000,
     4: 11000,
 }
+
+
+try:
+    from Config.local_config import *
+except ImportError:
+    pass
