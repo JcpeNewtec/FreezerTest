@@ -14,7 +14,7 @@ from Config.analysis_config import (
     FILTER_ANALYSIS_CONFIG,
     SPATIAL_EDGE_ROIS,
     SPECTRAL_LINE_ROIS,
-    SIGNAL_STRENGTH_ROIS,
+    NO_FILTER_SIGNAL_ROIS,
     SMOOTHING_ENABLED,
     SPECTRAL_SMOOTHING_WINDOW,
     SPATIAL_SMOOTHING_WINDOW,
@@ -370,10 +370,10 @@ def signal_strength_metrics_for_roi(image: np.ndarray, roi: dict) -> dict:
         "signal_mean": float(np.mean(cropped)),
         "signal_median": float(np.median(cropped)),
         "signal_std": float(np.std(cropped)),
-        "signal_min": float(np.min(cropped)),
-        "signal_max": float(np.max(cropped)),
         "signal_p05": float(np.percentile(cropped, 5)),
         "signal_p95": float(np.percentile(cropped, 95)),
+        "signal_min": float(np.min(cropped)),
+        "signal_max": float(np.max(cropped)),
     }
 
 def spatial_metrics_for_roi(
@@ -508,6 +508,7 @@ def get_temperature(summary: dict) -> dict:
     return temp.get("temperatures_c", {})
 
 
+
 def analyze_sweep(
     sweep_dir: Path,
     debug_dir: Path | None = None,
@@ -579,17 +580,16 @@ def analyze_sweep(
             ]
 
             result.update(average_metric_dicts(roi_metrics, name))
-            
-        if name in SIGNAL_STRENGTH_ROIS:
+
             signal_roi_metrics = [
                 signal_strength_metrics_for_roi(image, roi)
-                for roi in SIGNAL_STRENGTH_ROIS[name]
+                for roi in NO_FILTER_SIGNAL_ROIS
             ]
-    
+
             result.update(
                 average_metric_dicts(
                     signal_roi_metrics,
-                    f"{name}_signal",
+                    "no_filter_signal",
                 )
             )
 
@@ -667,6 +667,8 @@ PRIMARY_METRIC_COLUMNS = [
     "no_filter_edge_contrast_mean",
     
     "no_filter_signal_signal_mean_mean",
+    "no_filter_signal_signal_mean_mean_delta",
+    "no_filter_signal_signal_std_mean",
 ]
 
 
@@ -737,6 +739,55 @@ def plot_metric(
     plt.savefig(output_path, dpi=200)
     plt.close()
 
+def plot_metric_with_error(
+    df: pd.DataFrame,
+    x_col: str,
+    y_cols: list[str],
+    output_path: Path,
+    ylabel: str,
+):
+    if x_col not in df.columns:
+        return
+
+    plt.figure()
+    plotted = False
+
+    for y_col in y_cols:
+        if y_col not in df.columns:
+            continue
+
+        yerr_col = y_col.replace("_mean", "_std")
+
+        if yerr_col in df.columns:
+            plt.errorbar(
+                df[x_col],
+                df[y_col],
+                yerr=df[yerr_col],
+                marker="o",
+                capsize=3,
+                label=y_col,
+            )
+        else:
+            plt.plot(
+                df[x_col],
+                df[y_col],
+                marker="o",
+                label=y_col,
+            )
+
+        plotted = True
+
+    if not plotted:
+        plt.close()
+        return
+
+    plt.xlabel(x_col)
+    plt.ylabel(ylabel)
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=200)
+    plt.close()
+
 def plot_scatter_metric(
     df: pd.DataFrame,
     x_col: str,
@@ -795,12 +846,12 @@ def make_plots(df: pd.DataFrame, analysis_dir: Path):
 
     spatial_fwhm_cols = SPATIAL_FWHM_COLUMNS
     
-    signal_cols = [
+    no_filter_signal_cols = [
         "no_filter_signal_signal_mean_mean",
     ]
-    
-    signal_delta_cols = [
-        f"{col}_delta" for col in signal_cols
+
+    no_filter_signal_delta_cols = [
+        "no_filter_signal_signal_mean_mean_delta",
     ]
 
     spatial_fwhm_delta_cols = [
@@ -821,7 +872,7 @@ def make_plots(df: pd.DataFrame, analysis_dir: Path):
     )
 
     # Absolute resolution vs sweep
-    plot_metric(
+    plot_metric_with_error(
         df,
         "sweep_index",
         spectral_fwhm_cols,
@@ -829,7 +880,7 @@ def make_plots(df: pd.DataFrame, analysis_dir: Path):
         "Spectral FWHM [px]",
     )
 
-    plot_metric(
+    plot_metric_with_error(
         df,
         "sweep_index",
         spatial_fwhm_cols,
@@ -871,20 +922,20 @@ def make_plots(df: pd.DataFrame, analysis_dir: Path):
         "Spatial edge shift [px]",
     )
     
-    plot_metric(
+    plot_metric_with_error(
         df,
         "sweep_index",
-        signal_cols,
-        plots_dir / "signal_strength_vs_sweep.png",
-        "Mean signal [DN]",
+        no_filter_signal_cols,
+        plots_dir / "no_filter_signal_strength_vs_sweep.png",
+        "No-filter mean signal [DN]",
     )
-    
+
     plot_metric(
         df,
         "sweep_index",
-        signal_delta_cols,
-        plots_dir / "signal_strength_delta_vs_sweep.png",
-        "Mean signal change [DN]",
+        no_filter_signal_delta_cols,
+        plots_dir / "no_filter_signal_strength_delta_vs_sweep.png",
+        "No-filter mean signal change [DN]",
     )
 
     # Vs first temperature probe
@@ -903,6 +954,14 @@ def make_plots(df: pd.DataFrame, analysis_dir: Path):
             spectral_peak_shift_delta_cols,
             plots_dir / "spectral_peak_shift_delta_vs_probe_1_temperature.png",
             "Spectral line shift [px]",
+        )
+        
+        plot_metric(
+            df,
+            "temp_probe_1_c",
+            no_filter_signal_delta_cols,
+            plots_dir / "no_filter_signal_strength_delta_vs_probe_1_temperature.png",
+            "No-filter mean signal change [DN]",
         )
 
     # Vs temperature difference between probe 1 and probe 2

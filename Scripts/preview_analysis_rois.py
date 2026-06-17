@@ -19,7 +19,7 @@ from Config.analysis_config import (
     FILTER_ANALYSIS_CONFIG,
     SPATIAL_EDGE_ROIS,
     SPECTRAL_LINE_ROIS,
-    SIGNAL_STRENGTH_ROIS,
+    NO_FILTER_SIGNAL_ROIS,
 )
 
 all_figures = []
@@ -73,18 +73,13 @@ def get_rois_for_filter(cfg):
     if cfg["type"] == "spatial":
         rois.extend(SPATIAL_EDGE_ROIS)
 
-    elif cfg["type"] == "spectral":
-        rois.extend(SPECTRAL_LINE_ROIS[cfg["name"]])
-
-    if cfg["name"] in SIGNAL_STRENGTH_ROIS:
-        signal_rois = []
-
-        for roi in SIGNAL_STRENGTH_ROIS[cfg["name"]]:
+        for roi in NO_FILTER_SIGNAL_ROIS:
             roi_copy = dict(roi)
             roi_copy["name"] = f"signal_{roi_copy.get('name', 'roi')}"
-            signal_rois.append(roi_copy)
+            rois.append(roi_copy)
 
-        rois.extend(signal_rois)
+    elif cfg["type"] == "spectral":
+        rois.extend(SPECTRAL_LINE_ROIS[cfg["name"]])
 
     return rois
 

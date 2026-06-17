@@ -64,12 +64,10 @@ SPECTRAL_LINE_ROIS = {
 }
 
 
-SIGNAL_STRENGTH_ROIS = {
-    "no_filter": [
+NO_FILTER_SIGNAL_ROIS = [
         {"name": "signal_1", "x0": 600, "x1": 680, "y0": 460, "y1": 540},
         {"name": "signal_2", "x0": 600, "x1": 680, "y0": 540, "y1": 620},
-    ],
-}
+    ]
 
 # Smoothing
 # For spectral lines the raw profiles are already clean, so smoothing should usually be off.
