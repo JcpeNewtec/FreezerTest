@@ -40,17 +40,34 @@ FILTER_ANALYSIS_CONFIG = {
 
 SPATIAL_EDGE_ROIS = [
     {"name": "edge_1", "x0": 720, "x1": 750, "y0": 460, "y1": 500},
+    {"name": "edge_2", "x0": 405, "x1": 435, "y0": 460, "y1": 500},
+    {"name": "edge_3", "x0": 560, "x1": 590, "y0": 460, "y1": 500},
 ]
+
 
 SPECTRAL_LINE_ROIS = {
     "bp_780": [
         {"name": "roi_1", "x0": 620, "x1": 650, "y0": 260, "y1": 300},
+        {"name": "roi_2", "x0": 450, "x1": 480, "y0": 260, "y1": 300},
+        {"name": "roi_3", "x0": 760, "x1": 790, "y0": 260, "y1": 300},
     ],
     "bp_1064": [
         {"name": "roi_1", "x0": 620, "x1": 650, "y0": 460, "y1": 500},
+        {"name": "roi_2", "x0": 450, "x1": 480, "y0": 460, "y1": 500},
+        {"name": "roi_3", "x0": 760, "x1": 790, "y0": 460, "y1": 500},
     ],
     "bp_1550": [
         {"name": "roi_1", "x0": 620, "x1": 650, "y0": 815, "y1": 855},
+        {"name": "roi_2", "x0": 450, "x1": 480, "y0": 815, "y1": 855},
+        {"name": "roi_3", "x0": 760, "x1": 790, "y0": 815, "y1": 855},
+    ],
+}
+
+
+SIGNAL_STRENGTH_ROIS = {
+    "no_filter": [
+        {"name": "signal_1", "x0": 600, "x1": 680, "y0": 460, "y1": 540},
+        {"name": "signal_2", "x0": 600, "x1": 680, "y0": 540, "y1": 620},
     ],
 }
 
@@ -61,8 +78,11 @@ SMOOTHING_ENABLED = True
 SPECTRAL_SMOOTHING_WINDOW = 1
 SPATIAL_SMOOTHING_WINDOW = 1
 
-DEBUG_PROFILE_PLOTS = False
-DEBUG_PROFILE_PLOT_MAX_SWEEPS = 1
-
+# Spatial LSF Gaussian fitting
 SPATIAL_LSF_GAUSSIAN_FIT_ENABLED = True
 SPATIAL_LSF_FIT_HALF_WINDOW = 5
+
+# Debug profile plots
+# Turn this on while tuning ROIs/metrics.
+DEBUG_PROFILE_PLOTS = False
+DEBUG_PROFILE_PLOT_MAX_SWEEPS = 1

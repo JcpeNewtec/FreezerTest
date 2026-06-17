@@ -19,6 +19,7 @@ from Config.analysis_config import (
     FILTER_ANALYSIS_CONFIG,
     SPATIAL_EDGE_ROIS,
     SPECTRAL_LINE_ROIS,
+    SIGNAL_STRENGTH_ROIS,
 )
 
 all_figures = []
@@ -67,13 +68,25 @@ def draw_rois(image, rois, title, output_path):
 
 
 def get_rois_for_filter(cfg):
+    rois = []
+
     if cfg["type"] == "spatial":
-        return SPATIAL_EDGE_ROIS
+        rois.extend(SPATIAL_EDGE_ROIS)
 
-    if cfg["type"] == "spectral":
-        return SPECTRAL_LINE_ROIS[cfg["name"]]
+    elif cfg["type"] == "spectral":
+        rois.extend(SPECTRAL_LINE_ROIS[cfg["name"]])
 
-    return []
+    if cfg["name"] in SIGNAL_STRENGTH_ROIS:
+        signal_rois = []
+
+        for roi in SIGNAL_STRENGTH_ROIS[cfg["name"]]:
+            roi_copy = dict(roi)
+            roi_copy["name"] = f"signal_{roi_copy.get('name', 'roi')}"
+            signal_rois.append(roi_copy)
+
+        rois.extend(signal_rois)
+
+    return rois
 
 
 def main():

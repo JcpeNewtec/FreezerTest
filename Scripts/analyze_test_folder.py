@@ -14,6 +14,7 @@ from Config.analysis_config import (
     FILTER_ANALYSIS_CONFIG,
     SPATIAL_EDGE_ROIS,
     SPECTRAL_LINE_ROIS,
+    SIGNAL_STRENGTH_ROIS,
     SMOOTHING_ENABLED,
     SPECTRAL_SMOOTHING_WINDOW,
     SPATIAL_SMOOTHING_WINDOW,
@@ -361,6 +362,19 @@ def spectral_metrics_for_roi(
         "smoothing_window": SPECTRAL_SMOOTHING_WINDOW if SMOOTHING_ENABLED else 1,
     }
 
+def signal_strength_metrics_for_roi(image: np.ndarray, roi: dict) -> dict:
+    cropped = crop_roi(image, roi)
+
+    return {
+        "roi_name": roi.get("name", "roi"),
+        "signal_mean": float(np.mean(cropped)),
+        "signal_median": float(np.median(cropped)),
+        "signal_std": float(np.std(cropped)),
+        "signal_min": float(np.min(cropped)),
+        "signal_max": float(np.max(cropped)),
+        "signal_p05": float(np.percentile(cropped, 5)),
+        "signal_p95": float(np.percentile(cropped, 95)),
+    }
 
 def spatial_metrics_for_roi(
     image: np.ndarray,
@@ -565,6 +579,19 @@ def analyze_sweep(
             ]
 
             result.update(average_metric_dicts(roi_metrics, name))
+            
+        if name in SIGNAL_STRENGTH_ROIS:
+            signal_roi_metrics = [
+                signal_strength_metrics_for_roi(image, roi)
+                for roi in SIGNAL_STRENGTH_ROIS[name]
+            ]
+    
+            result.update(
+                average_metric_dicts(
+                    signal_roi_metrics,
+                    f"{name}_signal",
+                )
+            )
 
     return result
 
@@ -634,9 +661,12 @@ PRIMARY_METRIC_COLUMNS = [
     "bp_1064_peak_fit_y_px_mean_delta",
     "bp_1550_peak_fit_y_px_mean_delta",
     "no_filter_edge_gaussian_x_px_mean_delta",
+    "no_filter_signal_signal_mean_mean",
 
     # Useful quality metric
     "no_filter_edge_contrast_mean",
+    
+    "no_filter_signal_signal_mean_mean",
 ]
 
 
@@ -764,6 +794,14 @@ def make_plots(df: pd.DataFrame, analysis_dir: Path):
     ]
 
     spatial_fwhm_cols = SPATIAL_FWHM_COLUMNS
+    
+    signal_cols = [
+        "no_filter_signal_signal_mean_mean",
+    ]
+    
+    signal_delta_cols = [
+        f"{col}_delta" for col in signal_cols
+    ]
 
     spatial_fwhm_delta_cols = [
         f"{col}_delta" for col in SPATIAL_FWHM_COLUMNS
@@ -831,6 +869,22 @@ def make_plots(df: pd.DataFrame, analysis_dir: Path):
         spatial_shift_delta_cols,
         plots_dir / "spatial_position_delta_vs_sweep.png",
         "Spatial edge shift [px]",
+    )
+    
+    plot_metric(
+        df,
+        "sweep_index",
+        signal_cols,
+        plots_dir / "signal_strength_vs_sweep.png",
+        "Mean signal [DN]",
+    )
+    
+    plot_metric(
+        df,
+        "sweep_index",
+        signal_delta_cols,
+        plots_dir / "signal_strength_delta_vs_sweep.png",
+        "Mean signal change [DN]",
     )
 
     # Vs first temperature probe
