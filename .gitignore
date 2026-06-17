@@ -11,3 +11,5 @@ Test_Results/
 
 # Temporary files
 *.tmp
+
+Config/local_config.py
