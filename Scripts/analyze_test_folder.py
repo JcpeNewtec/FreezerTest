@@ -570,8 +570,36 @@ def analyze_sweep(
 
 
 # -----------------------------
-# CSV cleanup / deltas
+# Derived metrics / primary output
 # -----------------------------
+
+SPECTRAL_FWHM_COLUMNS = [
+    "bp_780_fwhm_px_mean",
+    "bp_1064_fwhm_px_mean",
+    "bp_1550_fwhm_px_mean",
+]
+
+SPECTRAL_PEAK_POSITION_COLUMNS = [
+    "bp_780_peak_fit_y_px_mean",
+    "bp_1064_peak_fit_y_px_mean",
+    "bp_1550_peak_fit_y_px_mean",
+]
+
+SPATIAL_POSITION_COLUMNS = [
+    "no_filter_edge_gaussian_x_px_mean",
+]
+
+SPATIAL_FWHM_COLUMNS = [
+    "no_filter_lsf_gaussian_fwhm_px_mean",
+]
+
+DELTA_COLUMNS = (
+    SPECTRAL_FWHM_COLUMNS
+    + SPECTRAL_PEAK_POSITION_COLUMNS
+    + SPATIAL_POSITION_COLUMNS
+    + SPATIAL_FWHM_COLUMNS
+)
+
 
 PRIMARY_METRIC_COLUMNS = [
     "sweep_name",
@@ -585,34 +613,45 @@ PRIMARY_METRIC_COLUMNS = [
     "temp_probe_4_c",
     "temp_probe_5_c",
 
-    # Spectral resolution
+    # Temperature gradient / difference
+    "temp_probe_2_minus_probe_1_c",
+    "temp_probe_2_minus_probe_1_abs_c",
+
+    # Absolute resolution values
     "bp_780_fwhm_px_mean",
     "bp_1064_fwhm_px_mean",
     "bp_1550_fwhm_px_mean",
-
-    # Spectral position drift
-    "bp_780_peak_fit_y_px_mean",
-    "bp_1064_peak_fit_y_px_mean",
-    "bp_1550_peak_fit_y_px_mean",
-
-    # Spatial resolution and position drift
     "no_filter_lsf_gaussian_fwhm_px_mean",
-    "no_filter_edge_gaussian_x_px_mean",
+
+    # Resolution changes from first sweep
+    "bp_780_fwhm_px_mean_delta",
+    "bp_1064_fwhm_px_mean_delta",
+    "bp_1550_fwhm_px_mean_delta",
+    "no_filter_lsf_gaussian_fwhm_px_mean_delta",
+
+    # Image / spectral movement only as deltas
+    "bp_780_peak_fit_y_px_mean_delta",
+    "bp_1064_peak_fit_y_px_mean_delta",
+    "bp_1550_peak_fit_y_px_mean_delta",
+    "no_filter_edge_gaussian_x_px_mean_delta",
+
+    # Useful quality metric
     "no_filter_edge_contrast_mean",
 ]
 
-DELTA_COLUMNS = [
-    "bp_780_fwhm_px_mean",
-    "bp_1064_fwhm_px_mean",
-    "bp_1550_fwhm_px_mean",
 
-    "bp_780_peak_fit_y_px_mean",
-    "bp_1064_peak_fit_y_px_mean",
-    "bp_1550_peak_fit_y_px_mean",
+def add_temperature_difference_columns(df: pd.DataFrame) -> pd.DataFrame:
+    df = df.copy()
 
-    "no_filter_lsf_gaussian_fwhm_px_mean",
-    "no_filter_edge_gaussian_x_px_mean",
-]
+    if "temp_probe_1_c" in df.columns and "temp_probe_2_c" in df.columns:
+        df["temp_probe_2_minus_probe_1_c"] = (
+            df["temp_probe_2_c"] - df["temp_probe_1_c"]
+        )
+        df["temp_probe_2_minus_probe_1_abs_c"] = (
+            df["temp_probe_2_minus_probe_1_c"].abs()
+        )
+
+    return df
 
 
 def add_delta_columns(df: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
@@ -633,10 +672,8 @@ def add_delta_columns(df: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
 
 
 def make_primary_dataframe(df: pd.DataFrame) -> pd.DataFrame:
-    primary_cols = [c for c in PRIMARY_METRIC_COLUMNS if c in df.columns]
-    delta_cols = [c for c in df.columns if c.endswith("_delta")]
-
-    return df[primary_cols + delta_cols]
+    primary_cols = [col for col in PRIMARY_METRIC_COLUMNS if col in df.columns]
+    return df[primary_cols]
 
 
 # -----------------------------
@@ -670,6 +707,39 @@ def plot_metric(
     plt.savefig(output_path, dpi=200)
     plt.close()
 
+def plot_scatter_metric(
+    df: pd.DataFrame,
+    x_col: str,
+    y_cols: list[str],
+    output_path: Path,
+    xlabel: str,
+    ylabel: str,
+):
+    if x_col not in df.columns:
+        return
+
+    plt.figure()
+    plotted = False
+
+    for y_col in y_cols:
+        if y_col in df.columns:
+            valid = df[[x_col, y_col]].dropna()
+            if valid.empty:
+                continue
+
+            plt.scatter(valid[x_col], valid[y_col], label=y_col)
+            plotted = True
+
+    if not plotted:
+        plt.close()
+        return
+
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=200)
+    plt.close()
 
 def make_plots(df: pd.DataFrame, analysis_dir: Path):
     plots_dir = analysis_dir / "plots"
@@ -683,46 +753,27 @@ def make_plots(df: pd.DataFrame, analysis_dir: Path):
         if col.startswith("temp_") and col.endswith("_c")
     ]
 
-    spectral_fwhm_cols = [
-        "bp_780_fwhm_px_mean",
-        "bp_1064_fwhm_px_mean",
-        "bp_1550_fwhm_px_mean",
-    ]
-
-    spectral_position_cols = [
-        "bp_780_peak_fit_y_px_mean",
-        "bp_1064_peak_fit_y_px_mean",
-        "bp_1550_peak_fit_y_px_mean",
-    ]
+    spectral_fwhm_cols = SPECTRAL_FWHM_COLUMNS
 
     spectral_fwhm_delta_cols = [
-        "bp_780_fwhm_px_mean_delta",
-        "bp_1064_fwhm_px_mean_delta",
-        "bp_1550_fwhm_px_mean_delta",
+        f"{col}_delta" for col in SPECTRAL_FWHM_COLUMNS
     ]
 
-    spectral_position_delta_cols = [
-        "bp_780_peak_fit_y_px_mean_delta",
-        "bp_1064_peak_fit_y_px_mean_delta",
-        "bp_1550_peak_fit_y_px_mean_delta",
+    spectral_peak_shift_delta_cols = [
+        f"{col}_delta" for col in SPECTRAL_PEAK_POSITION_COLUMNS
     ]
 
-    spatial_fwhm_cols = [
-        "no_filter_lsf_gaussian_fwhm_px_mean",
-    ]
-
-    spatial_position_cols = [
-        "no_filter_edge_gaussian_x_px_mean",
-    ]
+    spatial_fwhm_cols = SPATIAL_FWHM_COLUMNS
 
     spatial_fwhm_delta_cols = [
-        "no_filter_lsf_gaussian_fwhm_px_mean_delta",
+        f"{col}_delta" for col in SPATIAL_FWHM_COLUMNS
     ]
 
-    spatial_position_delta_cols = [
-        "no_filter_edge_gaussian_x_px_mean_delta",
+    spatial_shift_delta_cols = [
+        f"{col}_delta" for col in SPATIAL_POSITION_COLUMNS
     ]
 
+    # Temperatures
     plot_metric(
         df,
         "sweep_index",
@@ -731,6 +782,7 @@ def make_plots(df: pd.DataFrame, analysis_dir: Path):
         "Temperature [C]",
     )
 
+    # Absolute resolution vs sweep
     plot_metric(
         df,
         "sweep_index",
@@ -742,11 +794,12 @@ def make_plots(df: pd.DataFrame, analysis_dir: Path):
     plot_metric(
         df,
         "sweep_index",
-        spectral_position_cols,
-        plots_dir / "spectral_position_vs_sweep.png",
-        "Spectral peak-fit Y [px]",
+        spatial_fwhm_cols,
+        plots_dir / "spatial_resolution_vs_sweep.png",
+        "Spatial LSF Gaussian FWHM [px]",
     )
 
+    # Delta resolution vs sweep
     plot_metric(
         df,
         "sweep_index",
@@ -758,78 +811,76 @@ def make_plots(df: pd.DataFrame, analysis_dir: Path):
     plot_metric(
         df,
         "sweep_index",
-        spectral_position_delta_cols,
-        plots_dir / "spectral_position_delta_vs_sweep.png",
-        "Spectral line drift [px]",
-    )
-
-    plot_metric(
-        df,
-        "sweep_index",
-        spatial_fwhm_cols,
-        plots_dir / "spatial_resolution_vs_sweep.png",
-        "Spatial LSF Gaussian FWHM [px]",
-    )
-
-    plot_metric(
-        df,
-        "sweep_index",
-        spatial_position_cols,
-        plots_dir / "spatial_edge_position_vs_sweep.png",
-        "Spatial edge Gaussian X [px]",
-    )
-
-    plot_metric(
-        df,
-        "sweep_index",
         spatial_fwhm_delta_cols,
         plots_dir / "spatial_resolution_delta_vs_sweep.png",
         "Spatial FWHM change [px]",
     )
 
+    # Movement only as deltas
     plot_metric(
         df,
         "sweep_index",
-        spatial_position_delta_cols,
-        plots_dir / "spatial_position_delta_vs_sweep.png",
-        "Spatial edge drift [px]",
+        spectral_peak_shift_delta_cols,
+        plots_dir / "spectral_peak_shift_delta_vs_sweep.png",
+        "Spectral line shift [px]",
     )
 
-    if temp_cols:
-        x_temp = temp_cols[0]
+    plot_metric(
+        df,
+        "sweep_index",
+        spatial_shift_delta_cols,
+        plots_dir / "spatial_position_delta_vs_sweep.png",
+        "Spatial edge shift [px]",
+    )
 
+    # Vs first temperature probe
+    if "temp_probe_1_c" in df.columns:
         plot_metric(
             df,
-            x_temp,
+            "temp_probe_1_c",
             spectral_fwhm_delta_cols,
-            plots_dir / "spectral_fwhm_delta_vs_temperature.png",
+            plots_dir / "spectral_fwhm_delta_vs_probe_1_temperature.png",
             "Spectral FWHM change [px]",
         )
 
         plot_metric(
             df,
-            x_temp,
-            spectral_position_delta_cols,
-            plots_dir / "spectral_position_delta_vs_temperature.png",
-            "Spectral line drift [px]",
+            "temp_probe_1_c",
+            spectral_peak_shift_delta_cols,
+            plots_dir / "spectral_peak_shift_delta_vs_probe_1_temperature.png",
+            "Spectral line shift [px]",
         )
 
-        plot_metric(
+    # Vs temperature difference between probe 1 and probe 2
+    gradient_col = "temp_probe_2_minus_probe_1_c"
+
+    if gradient_col in df.columns:
+        plot_scatter_metric(
             df,
-            x_temp,
+            gradient_col,
+            spectral_fwhm_delta_cols,
+            plots_dir / "spectral_fwhm_delta_vs_probe_2_minus_probe_1.png",
+            "Probe 2 - Probe 1 temperature difference [C]",
+            "Spectral FWHM change [px]",
+        )
+
+        plot_scatter_metric(
+            df,
+            gradient_col,
+            spectral_peak_shift_delta_cols,
+            plots_dir / "spectral_peak_shift_delta_vs_probe_2_minus_probe_1.png",
+            "Probe 2 - Probe 1 temperature difference [C]",
+            "Spectral line shift [px]",
+        )
+
+        plot_scatter_metric(
+            df,
+            gradient_col,
             spatial_fwhm_delta_cols,
-            plots_dir / "spatial_resolution_delta_vs_temperature.png",
+            plots_dir / "spatial_fwhm_delta_vs_probe_2_minus_probe_1.png",
+            "Probe 2 - Probe 1 temperature difference [C]",
             "Spatial FWHM change [px]",
         )
-
-        plot_metric(
-            df,
-            x_temp,
-            spatial_position_delta_cols,
-            plots_dir / "spatial_position_delta_vs_temperature.png",
-            "Spatial edge drift [px]",
-        )
-
 
 # -----------------------------
 # Debug plotting
@@ -960,18 +1011,20 @@ def main():
             )
 
     df = pd.DataFrame(rows)
+    
+    df = add_temperature_difference_columns(df)
     df = add_delta_columns(df, DELTA_COLUMNS)
-
+    
     diagnostics_path = analysis_dir / "sweep_diagnostics.csv"
     df.to_csv(diagnostics_path, index=False)
-
+    
     primary_df = make_primary_dataframe(df)
-
+    
     metrics_path = analysis_dir / "sweep_metrics.csv"
     primary_df.to_csv(metrics_path, index=False)
-
+    
     make_plots(df, analysis_dir)
-
+    
     print(f"Analysis complete: {analysis_dir}")
     print(f"Primary metrics written to: {metrics_path}")
     print(f"Diagnostics written to: {diagnostics_path}")
