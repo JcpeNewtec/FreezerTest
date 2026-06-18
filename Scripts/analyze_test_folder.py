@@ -624,7 +624,9 @@ DELTA_COLUMNS = (
     SPECTRAL_FWHM_COLUMNS
     + SPECTRAL_PEAK_POSITION_COLUMNS
     + SPATIAL_POSITION_COLUMNS
-    + SPATIAL_FWHM_COLUMNS
+    + [
+        "no_filter_signal_signal_mean_mean",
+    ]
 )
 
 
@@ -640,32 +642,24 @@ PRIMARY_METRIC_COLUMNS = [
     "temp_probe_4_c",
     "temp_probe_5_c",
 
-    # Temperature gradient / difference
-    "temp_probe_2_minus_probe_1_c",
-    "temp_probe_2_minus_probe_1_abs_c",
-
     # Absolute resolution values
     "bp_780_fwhm_px_mean",
     "bp_1064_fwhm_px_mean",
     "bp_1550_fwhm_px_mean",
     "no_filter_lsf_gaussian_fwhm_px_mean",
 
-    # Resolution changes from first sweep
+    # Spectral FWHM change
     "bp_780_fwhm_px_mean_delta",
     "bp_1064_fwhm_px_mean_delta",
     "bp_1550_fwhm_px_mean_delta",
-    "no_filter_lsf_gaussian_fwhm_px_mean_delta",
 
-    # Image / spectral movement only as deltas
+    # Image / spectral movement
     "bp_780_peak_fit_y_px_mean_delta",
     "bp_1064_peak_fit_y_px_mean_delta",
     "bp_1550_peak_fit_y_px_mean_delta",
     "no_filter_edge_gaussian_x_px_mean_delta",
-    "no_filter_signal_signal_mean_mean",
 
-    # Useful quality metric
-    "no_filter_edge_contrast_mean",
-    
+    # No-filter signal
     "no_filter_signal_signal_mean_mean",
     "no_filter_signal_signal_mean_mean_delta",
     "no_filter_signal_signal_std_mean",
@@ -831,7 +825,7 @@ def make_plots(df: pd.DataFrame, analysis_dir: Path):
 
     temp_cols = [
         col for col in df.columns
-        if col.startswith("temp_") and col.endswith("_c")
+        if col.startswith("temp_probe_") and col.endswith("_c")
     ]
 
     spectral_fwhm_cols = SPECTRAL_FWHM_COLUMNS
@@ -845,24 +839,16 @@ def make_plots(df: pd.DataFrame, analysis_dir: Path):
     ]
 
     spatial_fwhm_cols = SPATIAL_FWHM_COLUMNS
-    
-    no_filter_signal_cols = [
-        "no_filter_signal_signal_mean_mean",
-    ]
-
-    no_filter_signal_delta_cols = [
-        "no_filter_signal_signal_mean_mean_delta",
-    ]
-
-    spatial_fwhm_delta_cols = [
-        f"{col}_delta" for col in SPATIAL_FWHM_COLUMNS
-    ]
 
     spatial_shift_delta_cols = [
         f"{col}_delta" for col in SPATIAL_POSITION_COLUMNS
     ]
 
-    # Temperatures
+    no_filter_signal_cols = [
+        "no_filter_signal_signal_mean_mean",
+    ]
+
+    # 1. Probe temperature vs sweep
     plot_metric(
         df,
         "sweep_index",
@@ -871,57 +857,7 @@ def make_plots(df: pd.DataFrame, analysis_dir: Path):
         "Temperature [C]",
     )
 
-    # Absolute resolution vs sweep
-    plot_metric_with_error(
-        df,
-        "sweep_index",
-        spectral_fwhm_cols,
-        plots_dir / "spectral_fwhm_vs_sweep.png",
-        "Spectral FWHM [px]",
-    )
-
-    plot_metric_with_error(
-        df,
-        "sweep_index",
-        spatial_fwhm_cols,
-        plots_dir / "spatial_resolution_vs_sweep.png",
-        "Spatial LSF Gaussian FWHM [px]",
-    )
-
-    # Delta resolution vs sweep
-    plot_metric(
-        df,
-        "sweep_index",
-        spectral_fwhm_delta_cols,
-        plots_dir / "spectral_fwhm_delta_vs_sweep.png",
-        "Spectral FWHM change [px]",
-    )
-
-    plot_metric(
-        df,
-        "sweep_index",
-        spatial_fwhm_delta_cols,
-        plots_dir / "spatial_resolution_delta_vs_sweep.png",
-        "Spatial FWHM change [px]",
-    )
-
-    # Movement only as deltas
-    plot_metric(
-        df,
-        "sweep_index",
-        spectral_peak_shift_delta_cols,
-        plots_dir / "spectral_peak_shift_delta_vs_sweep.png",
-        "Spectral line shift [px]",
-    )
-
-    plot_metric(
-        df,
-        "sweep_index",
-        spatial_shift_delta_cols,
-        plots_dir / "spatial_position_delta_vs_sweep.png",
-        "Spatial edge shift [px]",
-    )
-    
+    # 2. No-filter signal strength with error bars
     plot_metric_with_error(
         df,
         "sweep_index",
@@ -930,70 +866,50 @@ def make_plots(df: pd.DataFrame, analysis_dir: Path):
         "No-filter mean signal [DN]",
     )
 
+    # 3. Spatial edge shift vs sweep index
     plot_metric(
         df,
         "sweep_index",
-        no_filter_signal_delta_cols,
-        plots_dir / "no_filter_signal_strength_delta_vs_sweep.png",
-        "No-filter mean signal change [DN]",
+        spatial_shift_delta_cols,
+        plots_dir / "spatial_edge_shift_vs_sweep.png",
+        "Spatial edge shift [px]",
     )
 
-    # Vs first temperature probe
-    if "temp_probe_1_c" in df.columns:
-        plot_metric(
-            df,
-            "temp_probe_1_c",
-            spectral_fwhm_delta_cols,
-            plots_dir / "spectral_fwhm_delta_vs_probe_1_temperature.png",
-            "Spectral FWHM change [px]",
-        )
+    # 4. Spatial absolute FWHM with error bars
+    plot_metric_with_error(
+        df,
+        "sweep_index",
+        spatial_fwhm_cols,
+        plots_dir / "spatial_absolute_fwhm_vs_sweep.png",
+        "Spatial LSF Gaussian FWHM [px]",
+    )
 
-        plot_metric(
-            df,
-            "temp_probe_1_c",
-            spectral_peak_shift_delta_cols,
-            plots_dir / "spectral_peak_shift_delta_vs_probe_1_temperature.png",
-            "Spectral line shift [px]",
-        )
-        
-        plot_metric(
-            df,
-            "temp_probe_1_c",
-            no_filter_signal_delta_cols,
-            plots_dir / "no_filter_signal_strength_delta_vs_probe_1_temperature.png",
-            "No-filter mean signal change [DN]",
-        )
+    # 5. Spectral absolute FWHM with error bars
+    plot_metric_with_error(
+        df,
+        "sweep_index",
+        spectral_fwhm_cols,
+        plots_dir / "spectral_absolute_fwhm_vs_sweep.png",
+        "Spectral FWHM [px]",
+    )
 
-    # Vs temperature difference between probe 1 and probe 2
-    gradient_col = "temp_probe_2_minus_probe_1_c"
+    # 6. Spectral FWHM change vs sweep index
+    plot_metric(
+        df,
+        "sweep_index",
+        spectral_fwhm_delta_cols,
+        plots_dir / "spectral_fwhm_change_vs_sweep.png",
+        "Spectral FWHM change [px]",
+    )
 
-    if gradient_col in df.columns:
-        plot_scatter_metric(
-            df,
-            gradient_col,
-            spectral_fwhm_delta_cols,
-            plots_dir / "spectral_fwhm_delta_vs_probe_2_minus_probe_1.png",
-            "Probe 2 - Probe 1 temperature difference [C]",
-            "Spectral FWHM change [px]",
-        )
-
-        plot_scatter_metric(
-            df,
-            gradient_col,
-            spectral_peak_shift_delta_cols,
-            plots_dir / "spectral_peak_shift_delta_vs_probe_2_minus_probe_1.png",
-            "Probe 2 - Probe 1 temperature difference [C]",
-            "Spectral line shift [px]",
-        )
-
-        plot_scatter_metric(
-            df,
-            gradient_col,
-            spatial_fwhm_delta_cols,
-            plots_dir / "spatial_fwhm_delta_vs_probe_2_minus_probe_1.png",
-            "Probe 2 - Probe 1 temperature difference [C]",
-            "Spatial FWHM change [px]",
-        )
+    # 7. Spectral line shift vs sweep index
+    plot_metric(
+        df,
+        "sweep_index",
+        spectral_peak_shift_delta_cols,
+        plots_dir / "spectral_line_shift_vs_sweep.png",
+        "Spectral line shift [px]",
+    )
 
 # -----------------------------
 # Debug plotting

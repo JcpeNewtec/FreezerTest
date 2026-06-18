@@ -16,6 +16,7 @@ from Config.system_config import (
     MAX_CONSECUTIVE_FAILURES,
     MINIMUM_FREE_GB,
     FILTERWHEEL_HOME_ENABLED,
+    LAMP_WARMUP_S,
 )
 
 def check_storage(path: Path, minimum_free_gb: float = MINIMUM_FREE_GB):
@@ -136,7 +137,7 @@ def main():
                     home_filterwheel=FILTERWHEEL_HOME_ENABLED,
                     lamp_on_callback=temp_logger.lamp_on,
                     lamp_off_callback=temp_logger.lamp_off,
-                    lamp_warmup_s=0.2,
+                    lamp_warmup_s=LAMP_WARMUP_S,
                 )
 
                 temperature_after_sweep = temp_logger.get_latest_record()

@@ -51,6 +51,8 @@ FILTER_EXPOSURE_TIME_ABSOLUTE = {
     4: 11000,
 }
 
+LAMP_WARMUP_S = 2.0
+
 
 try:
     from Config.local_config import *

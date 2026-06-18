@@ -29,6 +29,7 @@ from Config.system_config import (
     FILTERWHEEL_HOME_MAX_STEPS,
     DEFAULT_EXPOSURE_TIME_ABSOLUTE,
     FILTER_EXPOSURE_TIME_ABSOLUTE,
+    LAMP_WARMUP_S,
 )
 
 
@@ -128,7 +129,7 @@ def run_single_sweep(
     home_filterwheel: bool = False,
     lamp_on_callback=None,
     lamp_off_callback=None,
-    lamp_warmup_s: float = 2,
+    lamp_warmup_s: float = LAMP_WARMUP_S,
 ):
     run_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     sweep_name = f"sweep_{sweep_index:04d}_{run_timestamp}"
