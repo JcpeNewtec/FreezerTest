@@ -853,7 +853,7 @@ def make_plots(df: pd.DataFrame, analysis_dir: Path):
         df,
         "sweep_index",
         temp_cols,
-        plots_dir / "temperature_vs_sweep.png",
+        plots_dir / "01_temperature_vs_sweep.png",
         "Temperature [C]",
     )
 
@@ -862,7 +862,7 @@ def make_plots(df: pd.DataFrame, analysis_dir: Path):
         df,
         "sweep_index",
         no_filter_signal_cols,
-        plots_dir / "no_filter_signal_strength_vs_sweep.png",
+        plots_dir / "02_signal_vs_sweep.png",
         "No-filter mean signal [DN]",
     )
 
@@ -871,7 +871,7 @@ def make_plots(df: pd.DataFrame, analysis_dir: Path):
         df,
         "sweep_index",
         spatial_shift_delta_cols,
-        plots_dir / "spatial_edge_shift_vs_sweep.png",
+        plots_dir / "06_spatial_edge_shift_vs_sweep.png",
         "Spatial edge shift [px]",
     )
 
@@ -880,7 +880,7 @@ def make_plots(df: pd.DataFrame, analysis_dir: Path):
         df,
         "sweep_index",
         spatial_fwhm_cols,
-        plots_dir / "spatial_absolute_fwhm_vs_sweep.png",
+        plots_dir / "03_spatial_fwhm_vs_sweep.png",
         "Spatial LSF Gaussian FWHM [px]",
     )
 
@@ -889,7 +889,7 @@ def make_plots(df: pd.DataFrame, analysis_dir: Path):
         df,
         "sweep_index",
         spectral_fwhm_cols,
-        plots_dir / "spectral_absolute_fwhm_vs_sweep.png",
+        plots_dir / "04_spectral_fwhm_vs_sweep.png",
         "Spectral FWHM [px]",
     )
 
@@ -898,7 +898,7 @@ def make_plots(df: pd.DataFrame, analysis_dir: Path):
         df,
         "sweep_index",
         spectral_fwhm_delta_cols,
-        plots_dir / "spectral_fwhm_change_vs_sweep.png",
+        plots_dir / "05_spectral_fwhm_change_vs_sweep.png",
         "Spectral FWHM change [px]",
     )
 
@@ -907,7 +907,7 @@ def make_plots(df: pd.DataFrame, analysis_dir: Path):
         df,
         "sweep_index",
         spectral_peak_shift_delta_cols,
-        plots_dir / "spectral_line_shift_vs_sweep.png",
+        plots_dir / "07_spectral_line_shift_vs_sweep.png",
         "Spectral line shift [px]",
     )
 
@@ -1051,6 +1051,11 @@ def main():
     
     metrics_path = analysis_dir / "sweep_metrics.csv"
     primary_df.to_csv(metrics_path, index=False)
+    
+    plots_dir = analysis_dir / "plots"
+    if plots_dir.exists():
+        import shutil
+        shutil.rmtree(plots_dir)
     
     make_plots(df, analysis_dir)
     
