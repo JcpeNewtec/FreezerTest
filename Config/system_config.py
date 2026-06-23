@@ -61,6 +61,11 @@ FILTER_EXPOSURE_TIME_ABSOLUTE = {
 
 LAMP_WARMUP_S = 2.0
 
+# Test metadata
+CAMERA_ID = "unknown_camera"
+TEST_OPERATOR = "JCPE"
+TEST_NOTES = ""
+
 
 try:
     from Config.local_config import *

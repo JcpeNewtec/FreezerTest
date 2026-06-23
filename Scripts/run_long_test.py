@@ -20,6 +20,9 @@ from Config.system_config import (
     CAMERA_POWER_CONTROL_ENABLED,
     CAMERA_POWER_BOOT_WAIT_S,
     CAMERA_POWER_OFF_AT_TEST_END,
+    CAMERA_ID,
+    TEST_OPERATOR,
+    TEST_NOTES,
 )
 
 def check_storage(path: Path, minimum_free_gb: float = MINIMUM_FREE_GB):
@@ -60,6 +63,20 @@ def main():
     temp_logger = TemperatureLogger(log_path=temperature_log_path, interval_s=1.0)
 
     storage_info = check_storage(test_root_dir)
+    
+    metadata_path = test_root_dir / "test_metadata.json"
+
+    test_metadata = {
+        "camera_id": CAMERA_ID,
+        "test_date": test_start.date().isoformat(),
+        "test_start_time": test_start.isoformat(timespec="seconds"),
+        "test_duration_hours": TEST_DURATION_HOURS,
+        "operator": TEST_OPERATOR,
+        "notes": TEST_NOTES,
+    }
+    
+    with open(metadata_path, "w", encoding="utf-8") as f:
+        json.dump(test_metadata, f, indent=4)
 
     test_summary = {
         "test_name": TEST_NAME,
@@ -74,6 +91,7 @@ def main():
         "completed_sweeps": 0,
         "failed_sweeps": 0,
         "events": [],
+        "metadata_path": str(metadata_path),
     }
 
     with open(summary_path, "w", encoding="utf-8") as f:
