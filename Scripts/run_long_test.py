@@ -17,6 +17,9 @@ from Config.system_config import (
     MINIMUM_FREE_GB,
     FILTERWHEEL_HOME_ENABLED,
     LAMP_WARMUP_S,
+    CAMERA_POWER_CONTROL_ENABLED,
+    CAMERA_POWER_BOOT_WAIT_S,
+    CAMERA_POWER_OFF_AT_TEST_END,
 )
 
 def check_storage(path: Path, minimum_free_gb: float = MINIMUM_FREE_GB):
@@ -88,6 +91,14 @@ def main():
     print(f"Create this file to stop after the current sweep: {stop_file_path}")
     print("Starting temperature logger...")
     temp_logger.start()
+    
+    if CAMERA_POWER_CONTROL_ENABLED:
+        print("Turning camera power ON...")
+        camera_power_on_record = temp_logger.camera_power_on()
+        test_summary["camera_power_on_record"] = camera_power_on_record
+    
+        print(f"Waiting {CAMERA_POWER_BOOT_WAIT_S} s for camera boot/stabilization...")
+        time.sleep(CAMERA_POWER_BOOT_WAIT_S)
 
     try:
         while datetime.now() < test_end and sweep_index <= MAX_SWEEPS:
@@ -202,6 +213,15 @@ def main():
         print(f"Long test aborted: {e}")
 
     finally:
+        if CAMERA_POWER_CONTROL_ENABLED and CAMERA_POWER_OFF_AT_TEST_END:
+            try:
+                print("Turning camera power OFF...")
+                camera_power_off_record = temp_logger.camera_power_off()
+                test_summary["camera_power_off_record"] = camera_power_off_record
+            except Exception as e:
+                print(f"Failed to turn camera power OFF: {e}")
+                test_summary["camera_power_off_error"] = str(e)
+    
         print("Stopping temperature logger...")
         temp_logger.stop()
 

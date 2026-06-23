@@ -107,3 +107,22 @@ class TemperatureLogger:
             self._controller.lamp_off()
             self._latest_record = self._controller.read_all()
             return self._latest_record
+        
+    def camera_power_on(self):
+        with self._lock:
+            if self._controller is None:
+                raise RuntimeError("TemperatureLogger is not running.")
+    
+            self._controller.camera_power_on()
+            self._latest_record = self._controller.read_all()
+            return self._latest_record
+    
+    
+    def camera_power_off(self):
+        with self._lock:
+            if self._controller is None:
+                raise RuntimeError("TemperatureLogger is not running.")
+    
+            self._controller.camera_power_off()
+            self._latest_record = self._controller.read_all()
+            return self._latest_record
