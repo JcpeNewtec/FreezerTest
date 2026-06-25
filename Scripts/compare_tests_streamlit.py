@@ -20,12 +20,12 @@ Expected input structure:
 """
 
 from pathlib import Path
+import json
+from datetime import date
 
 import pandas as pd
 import plotly.express as px
 import streamlit as st
-import json
-from datetime import datetime
 
 
 DEFAULT_RESULTS_ROOT = "."
@@ -58,6 +58,9 @@ METRIC_LABELS = {
     "no_filter_signal_signal_mean_mean": "No-filter signal mean [DN]",
     "no_filter_signal_signal_mean_mean_delta": "No-filter signal change [DN]",
     "no_filter_signal_signal_std_mean": "No-filter signal std [DN]",
+    "dark_noise_dark_mean_mean": "Dark-region mean level [DN]",
+    "dark_noise_noise_std_mean": "Dark-region noise std [DN]",
+    "dark_noise_noise_std_std": "Dark-region noise std ROI variation [DN]",
 }
 
 
@@ -84,6 +87,8 @@ PREFERRED_CUSTOM_METRICS = [
     "no_filter_lsf_gaussian_fwhm_px_mean",
     "no_filter_edge_gaussian_x_px_mean_delta",
     "no_filter_signal_signal_mean_mean",
+    "dark_noise_noise_std_mean",
+    "dark_noise_dark_mean_mean",    
 ]
 
 
@@ -112,6 +117,8 @@ def load_metrics(metric_file: str) -> pd.DataFrame:
 
     camera_id = metadata.get("camera_id") or test_dir.name
     test_date = metadata.get("test_date") or ""
+    test_duration_hours = metadata.get("test_duration_hours")
+    operator = metadata.get("operator") or ""
     notes = metadata.get("notes") or ""
 
     df["test_folder"] = test_dir.name
@@ -119,8 +126,8 @@ def load_metrics(metric_file: str) -> pd.DataFrame:
 
     df["camera_id"] = camera_id
     df["test_date"] = test_date
-    df["test_duration_hours"] = metadata.get("test_duration_hours")
-    df["operator"] = metadata.get("operator", "")
+    df["test_duration_hours"] = test_duration_hours
+    df["operator"] = operator
     df["notes"] = notes
 
     if test_date:
@@ -187,6 +194,7 @@ def plot_overlay(
     y_col: str,
     title: str | None = None,
     show_markers: bool = True,
+    chart_key: str | None = None,
 ):
     if x_col not in df.columns:
         st.warning(f"Missing x-axis column: {x_col}")
@@ -225,16 +233,27 @@ def plot_overlay(
         hovermode="closest",
     )
 
-    st.plotly_chart(fig, use_container_width=True)
+    if chart_key is None:
+        chart_key = f"plot_{x_col}_{y_col}_{abs(hash(title or ''))}"
+    
+    st.plotly_chart(
+        fig,
+        use_container_width=True,
+        key=chart_key,
+    )
 
 
-def selected_test_overview(selected_test_names: list[str], test_options: dict[str, str]) -> pd.DataFrame:
+def selected_test_overview(
+    selected_test_names: list[str],
+    test_options: dict[str, str],
+) -> pd.DataFrame:
     rows = []
 
     for test_name in selected_test_names:
-        df = load_metrics(test_options[test_name])
-        test_path = Path(test_options[test_name]).parent.parent
+        metric_path = Path(test_options[test_name])
+        test_path = metric_path.parent.parent
 
+        df = load_metrics(test_options[test_name])
         metadata = load_test_metadata(test_path)
 
         row = {
@@ -268,50 +287,57 @@ def selected_test_overview(selected_test_names: list[str], test_options: dict[st
     return pd.DataFrame(rows)
 
 
+
 def plot_metric_group(
     df: pd.DataFrame,
     x_col: str,
     metrics: list[tuple[str, str]],
     show_markers: bool,
+    key_prefix: str = "metric_group",
 ):
-    for metric_col, title in metrics:
+    for idx, (metric_col, title) in enumerate(metrics):
         plot_overlay(
             df=df,
             x_col=x_col,
             y_col=metric_col,
             title=title,
             show_markers=show_markers,
+            chart_key=f"{key_prefix}_{idx}_{x_col}_{metric_col}",
         )
+        
+def default_metadata(test_dir: Path) -> dict:
+    return {
+        "camera_id": test_dir.name,
+        "test_date": "",
+        "test_duration_hours": None,
+        "operator": "",
+        "notes": "",
+    }
 
 def load_test_metadata(test_dir: Path) -> dict:
     metadata_path = test_dir / "test_metadata.json"
     summary_path = test_dir / "test_summary.json"
 
-    metadata = {
-        "camera_id": test_dir.name,
-        "test_date": "",
-        "test_duration_hours": None,
-        "notes": "",
-        "operator": "",
-    }
+    metadata = default_metadata(test_dir)
 
     if metadata_path.exists():
         try:
             with open(metadata_path, "r", encoding="utf-8") as f:
                 user_metadata = json.load(f)
 
-            metadata.update(user_metadata)
+            if isinstance(user_metadata, dict):
+                metadata.update(user_metadata)
+
         except Exception as e:
             metadata["metadata_error"] = str(e)
 
-    # Fall back to test_summary.json where useful
     if summary_path.exists():
         try:
             with open(summary_path, "r", encoding="utf-8") as f:
                 summary = json.load(f)
 
             if not metadata.get("test_date") and summary.get("start_time"):
-                metadata["test_date"] = summary["start_time"].split("T")[0]
+                metadata["test_date"] = str(summary["start_time"]).split("T")[0]
 
             if metadata.get("test_duration_hours") is None:
                 metadata["test_duration_hours"] = summary.get("test_duration_hours")
@@ -321,6 +347,87 @@ def load_test_metadata(test_dir: Path) -> dict:
 
     return metadata
 
+def save_test_metadata(test_dir: Path, metadata: dict):
+    metadata_path = test_dir / "test_metadata.json"
+
+    with open(metadata_path, "w", encoding="utf-8") as f:
+        json.dump(metadata, f, indent=4)
+
+    # Clear Streamlit cache so the updated metadata is reloaded.
+    load_metrics.clear()
+    find_metric_files.clear()
+
+def metadata_editor(test_options: dict[str, str]):
+    st.subheader("Edit test metadata")
+
+    selected_test_name = st.selectbox(
+        "Test to edit",
+        options=list(test_options.keys()),
+        key="metadata_editor_selected_test",
+    )
+
+    metric_path = Path(test_options[selected_test_name])
+    test_dir = metric_path.parent.parent
+    metadata = load_test_metadata(test_dir)
+
+    camera_id = st.text_input(
+        "Camera ID",
+        value=str(metadata.get("camera_id") or ""),
+        key="metadata_camera_id",
+    )
+
+    current_date_text = str(metadata.get("test_date") or "")
+    try:
+        current_date = date.fromisoformat(current_date_text)
+    except ValueError:
+        current_date = date.today()
+
+    test_date = st.date_input(
+        "Test date",
+        value=current_date,
+        key="metadata_test_date",
+    )
+
+    duration_value = metadata.get("test_duration_hours")
+    try:
+        duration_value = float(duration_value)
+    except (TypeError, ValueError):
+        duration_value = 0.0
+
+    test_duration_hours = st.number_input(
+        "Test duration [hours]",
+        min_value=0.0,
+        value=duration_value,
+        step=0.5,
+        key="metadata_duration",
+    )
+
+    operator = st.text_input(
+        "Operator",
+        value=str(metadata.get("operator") or ""),
+        key="metadata_operator",
+    )
+
+    notes = st.text_area(
+        "Notes",
+        value=str(metadata.get("notes") or ""),
+        height=120,
+        key="metadata_notes",
+    )
+
+    if st.button("Save metadata"):
+        new_metadata = {
+            "camera_id": camera_id,
+            "test_date": test_date.isoformat(),
+            "test_duration_hours": test_duration_hours,
+            "operator": operator,
+            "notes": notes,
+        }
+
+        save_test_metadata(test_dir, new_metadata)
+
+        st.success(f"Saved metadata to {test_dir / 'test_metadata.json'}")
+        st.rerun()
 
 def main():
     st.set_page_config(
@@ -353,20 +460,87 @@ def main():
             st.warning("No analysis/sweep_metrics.csv files found.")
             st.stop()
 
-        test_options = {
+        test_options_all = {
             Path(path).parent.parent.name: path
             for path in metric_files
         }
-
+        
+        metadata_rows = []
+        
+        for test_name, metric_path in test_options_all.items():
+            test_dir = Path(metric_path).parent.parent
+            metadata = load_test_metadata(test_dir)
+        
+            metadata_rows.append({
+                "test": test_name,
+                "metric_path": metric_path,
+                "test_path": str(test_dir),
+                "camera_id": metadata.get("camera_id", test_name),
+                "test_date": metadata.get("test_date", ""),
+                "test_duration_hours": metadata.get("test_duration_hours", None),
+                "operator": metadata.get("operator", ""),
+                "notes": metadata.get("notes", ""),
+            })
+        
+        metadata_df = pd.DataFrame(metadata_rows)
+        
+        st.header("Filters")
+        
+        camera_options = sorted([
+            str(camera_id)
+            for camera_id in metadata_df["camera_id"].dropna().unique()
+        ])
+        
+        selected_cameras = st.multiselect(
+            "Camera ID",
+            options=camera_options,
+            default=camera_options,
+        )
+        
+        search_text = st.text_input(
+            "Search test/folder/notes",
+            value="",
+        )
+        
+        filtered_metadata_df = metadata_df.copy()
+        
+        if selected_cameras:
+            filtered_metadata_df = filtered_metadata_df[
+                filtered_metadata_df["camera_id"].isin(selected_cameras)
+            ]
+        
+        if search_text.strip():
+            search = search_text.strip().lower()
+        
+            search_mask = (
+                filtered_metadata_df["test"].astype(str).str.lower().str.contains(search, na=False)
+                | filtered_metadata_df["camera_id"].astype(str).str.lower().str.contains(search, na=False)
+                | filtered_metadata_df["notes"].astype(str).str.lower().str.contains(search, na=False)
+                | filtered_metadata_df["test_path"].astype(str).str.lower().str.contains(search, na=False)
+            )
+        
+            filtered_metadata_df = filtered_metadata_df[search_mask]
+        
+        filtered_test_options = {
+            row["test"]: row["metric_path"]
+            for _, row in filtered_metadata_df.iterrows()
+        }
+        
+        if not filtered_test_options:
+            st.warning("No tests match the current filters.")
+            st.stop()
+        
         selected_test_names = st.multiselect(
             "Select tests to compare",
-            options=list(test_options.keys()),
-            default=list(test_options.keys())[: min(3, len(test_options))],
+            options=list(filtered_test_options.keys()),
+            default=list(filtered_test_options.keys())[: min(3, len(filtered_test_options))],
         )
-
+        
         if not selected_test_names:
             st.warning("Select at least one test.")
             st.stop()
+        
+        test_options = filtered_test_options
 
     dfs = []
 
@@ -374,6 +548,15 @@ def main():
         dfs.append(load_metrics(test_options[test_name]))
 
     combined = pd.concat(dfs, ignore_index=True)
+    csv_data = combined.to_csv(index=False).encode("utf-8")
+
+    with st.sidebar:
+        st.download_button(
+            label="Download selected data CSV",
+            data=csv_data,
+            file_name="selected_freezer_test_data.csv",
+            mime="text/csv",
+        )
 
     numeric_cols = available_numeric_columns(combined)
 
@@ -413,6 +596,9 @@ def main():
         st.subheader("Selected tests")
         overview_df = selected_test_overview(selected_test_names, test_options)
         st.dataframe(overview_df, use_container_width=True)
+        
+        with st.expander("Edit metadata"):
+            metadata_editor(test_options_all)
 
         st.subheader("Temperature profile")
         for temp_col in [
@@ -429,6 +615,7 @@ def main():
                     y_col=temp_col,
                     title=f"{label_for_column(temp_col)} vs sweep index",
                     show_markers=show_markers,
+                    chart_key=f"overview_temperature_{temp_col}",
                 )
 
     with tabs[1]:
@@ -443,6 +630,7 @@ def main():
             df=combined,
             x_col=x_col,
             show_markers=show_markers,
+            key_prefix="spectral_resolution_abs",
             metrics=[
                 ("bp_780_fwhm_px_mean", "780 nm spectral FWHM"),
                 ("bp_1064_fwhm_px_mean", "1064 nm spectral FWHM"),
@@ -456,6 +644,7 @@ def main():
             df=combined,
             x_col=x_col,
             show_markers=show_markers,
+            key_prefix="spectral_resolution_delta",
             metrics=[
                 ("bp_780_fwhm_px_mean_delta", "780 nm spectral FWHM change"),
                 ("bp_1064_fwhm_px_mean_delta", "1064 nm spectral FWHM change"),
@@ -475,6 +664,7 @@ def main():
             df=combined,
             x_col=x_col,
             show_markers=show_markers,
+            key_prefix="spectral_shift",
             metrics=[
                 ("bp_780_peak_fit_y_px_mean_delta", "780 nm spectral line shift"),
                 ("bp_1064_peak_fit_y_px_mean_delta", "1064 nm spectral line shift"),
@@ -493,6 +683,7 @@ def main():
             df=combined,
             x_col=x_col,
             show_markers=show_markers,
+            key_prefix="spatial_performance",
             metrics=[
                 ("no_filter_lsf_gaussian_fwhm_px_mean", "Spatial absolute FWHM"),
                 ("no_filter_edge_gaussian_x_px_mean_delta", "Spatial edge shift"),
@@ -506,7 +697,7 @@ def main():
             "No-filter signal is useful for detecting illumination instability, "
             "camera response drift, or remaining warm-up effects."
         )
-
+     
         plot_metric_group(
             df=combined,
             x_col=x_col,
@@ -514,6 +705,8 @@ def main():
             metrics=[
                 ("no_filter_signal_signal_mean_mean", "No-filter signal mean"),
                 ("no_filter_signal_signal_mean_mean_delta", "No-filter signal change"),
+                ("dark_noise_noise_std_mean", "Dark-region noise level"),
+                ("dark_noise_dark_mean_mean", "Dark-region mean level"),
             ],
         )
 
@@ -542,6 +735,7 @@ def main():
             y_col=custom_y_col,
             title=f"{label_for_column(custom_y_col)} vs {label_for_column(x_col)}",
             show_markers=show_markers,
+            chart_key=f"custom_plot_{x_col}_{custom_y_col}",
         )
 
         with st.expander("Show plotted data"):

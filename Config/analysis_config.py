@@ -69,6 +69,13 @@ NO_FILTER_SIGNAL_ROIS = [
         {"name": "signal_2", "x0": 600, "x1": 680, "y0": 540, "y1": 620},
     ]
 
+NOISE_ANALYSIS_FILTER = "bp_1550"
+
+NOISE_ROIS = [
+        {"name": "noise_1", "x0": 200, "x1": 680, "y0": 460, "y1": 540},
+        {"name": "noise_2", "x0": 200, "x1": 680, "y0": 540, "y1": 620},
+    ]
+
 # Smoothing
 # For spectral lines the raw profiles are already clean, so smoothing should usually be off.
 # A window of 1 means "no smoothing".

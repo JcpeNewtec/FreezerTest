@@ -22,6 +22,8 @@ from Config.analysis_config import (
     DEBUG_PROFILE_PLOT_MAX_SWEEPS,
     SPATIAL_LSF_GAUSSIAN_FIT_ENABLED,
     SPATIAL_LSF_FIT_HALF_WINDOW,
+    NOISE_ANALYSIS_FILTER,
+    NOISE_ROIS,
 )
 
 try:
@@ -463,6 +465,26 @@ def spatial_metrics_for_roi(
         "smoothing_window": SPATIAL_SMOOTHING_WINDOW if SMOOTHING_ENABLED else 1,
     }
 
+def noise_metrics_for_roi(image: np.ndarray, roi: dict) -> dict:
+    cropped = crop_roi(image, roi)
+
+    return {
+        "roi_name": roi.get("name", "roi"),
+
+        # Dark/background level
+        "dark_mean": float(np.mean(cropped)),
+        "dark_median": float(np.median(cropped)),
+
+        # Noise level
+        "noise_std": float(np.std(cropped)),
+        "noise_rms": float(np.sqrt(np.mean((cropped - np.mean(cropped)) ** 2))),
+
+        # Useful diagnostics
+        "dark_p05": float(np.percentile(cropped, 5)),
+        "dark_p95": float(np.percentile(cropped, 95)),
+        "dark_min": float(np.min(cropped)),
+        "dark_max": float(np.max(cropped)),
+    }
 
 def average_metric_dicts(metric_dicts: list[dict], prefix: str) -> dict:
     output = {}
@@ -561,11 +583,24 @@ def analyze_sweep(
                 )
                 for roi in rois
             ]
-
+        
             result.update(average_metric_dicts(roi_metrics, name))
-
+        
             result[f"{name}_wavelength_nm"] = cfg["wavelength_nm"]
             result[f"{name}_filter_fwhm_nm"] = cfg["filter_fwhm_nm"]
+        
+            if name == NOISE_ANALYSIS_FILTER:
+                noise_roi_metrics = [
+                    noise_metrics_for_roi(image, roi)
+                    for roi in NOISE_ROIS
+                ]
+        
+                result.update(
+                    average_metric_dicts(
+                        noise_roi_metrics,
+                        "dark_noise",
+                    )
+                )
 
         elif cfg["type"] == "spatial":
             roi_metrics = [
@@ -663,6 +698,11 @@ PRIMARY_METRIC_COLUMNS = [
     "no_filter_signal_signal_mean_mean",
     "no_filter_signal_signal_mean_mean_delta",
     "no_filter_signal_signal_std_mean",
+
+    # Dark/noise level
+    "dark_noise_dark_mean_mean",
+    "dark_noise_noise_std_mean",
+    "dark_noise_noise_std_std",
 ]
 
 
@@ -847,6 +887,14 @@ def make_plots(df: pd.DataFrame, analysis_dir: Path):
     no_filter_signal_cols = [
         "no_filter_signal_signal_mean_mean",
     ]
+    
+    dark_noise_cols = [
+        "dark_noise_noise_std_mean",
+    ]
+    
+    dark_level_cols = [
+        "dark_noise_dark_mean_mean",
+    ]
 
     # 1. Probe temperature vs sweep
     plot_metric(
@@ -910,6 +958,23 @@ def make_plots(df: pd.DataFrame, analysis_dir: Path):
         plots_dir / "07_spectral_line_shift_vs_sweep.png",
         "Spectral line shift [px]",
     )
+    
+    plot_metric_with_error(
+        df,
+        "sweep_index",
+        dark_noise_cols,
+        plots_dir / "08_dark_noise_vs_sweep.png",
+        "Dark-region noise std [DN]",
+    )
+    
+    plot_metric_with_error(
+        df,
+        "sweep_index",
+        dark_level_cols,
+        plots_dir / "09_dark_level_vs_sweep.png",
+        "Dark-region mean level [DN]",
+    )
+    
 
 # -----------------------------
 # Debug plotting
