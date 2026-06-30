@@ -208,9 +208,16 @@ def gaussian_with_offset(x, amplitude, center, sigma, offset):
     return offset + amplitude * np.exp(-0.5 * ((x - center) / sigma) ** 2)
 
 
-def fit_gaussian_peak(profile: np.ndarray, half_window: int = 5) -> dict:
+def fit_gaussian_peak(
+    profile: np.ndarray,
+    half_window: int = 5,
+    peak_index: int | None = None,
+) -> dict:
     """
-    Fit Gaussian + constant offset around dominant peak.
+    Fit Gaussian + constant offset around a selected peak.
+
+    If peak_index is None, the dominant peak in the profile is used.
+    If peak_index is provided, the fit is centered around that peak.
     Used for spatial LSF resolution and edge position.
     """
     if not SCIPY_AVAILABLE:
@@ -231,7 +238,18 @@ def fit_gaussian_peak(profile: np.ndarray, half_window: int = 5) -> dict:
             "fwhm_px": np.nan,
         }
 
-    peak_idx = int(np.argmax(profile))
+    if peak_index is None:
+        peak_idx = int(np.argmax(profile))
+    else:
+        peak_idx = int(peak_index)
+
+    if peak_idx < 0 or peak_idx >= len(profile):
+        return {
+            "fit_success": False,
+            "error": "peak_index_out_of_range",
+            "center_px": np.nan,
+            "fwhm_px": np.nan,
+        }
 
     i0 = max(0, peak_idx - half_window)
     i1 = min(len(profile), peak_idx + half_window + 1)
@@ -310,8 +328,140 @@ def fit_gaussian_peak(profile: np.ndarray, half_window: int = 5) -> dict:
         "offset": float(offset),
         "fit_i0": int(i0),
         "fit_i1": int(i1),
+        "selected_peak_idx": int(peak_idx),
     }
 
+def find_lsf_peak_near_target(
+    signed_lsf: np.ndarray,
+    roi: dict,
+    esf: np.ndarray | None = None,
+) -> dict:
+    """
+    Find an LSF edge peak.
+
+    Supported modes:
+        fixed_target:
+            Search around roi["target_x"] +/- roi["search_half_width"].
+
+        dark_line_auto:
+            First locate a dark vertical bar from the ESF minimum, then
+            search for the requested left/right edge of that bar.
+    """
+    signed_lsf = np.asarray(signed_lsf, dtype=float)
+    edge_polarity = roi.get("edge_polarity", "any")
+    mode = roi.get("edge_search_mode", "fixed_target")
+
+    if mode == "dark_line_auto":
+        if esf is None:
+            raise ValueError("dark_line_auto requires esf.")
+
+        esf = np.asarray(esf, dtype=float)
+
+        target_x = roi.get("dark_line_target_x", roi.get("target_x"))
+        search_half_width = roi.get("dark_line_search_half_width", roi.get("search_half_width", len(esf) // 2))
+
+        if target_x is None:
+            dark_search_i0 = 0
+            dark_search_i1 = len(esf)
+            target_local_x = np.nan
+        else:
+            target_local_x = float(target_x) - float(roi["x0"])
+            dark_search_i0 = int(max(0, round(target_local_x - search_half_width)))
+            dark_search_i1 = int(min(len(esf), round(target_local_x + search_half_width + 1)))
+
+        if dark_search_i1 <= dark_search_i0:
+            dark_search_i0 = 0
+            dark_search_i1 = len(esf)
+
+        dark_search_profile = esf[dark_search_i0:dark_search_i1]
+
+        if len(dark_search_profile) < 1:
+            dark_line_local_x = int(np.argmin(esf))
+            used_dark_line_search = False
+        else:
+            dark_line_local_x = dark_search_i0 + int(np.argmin(dark_search_profile))
+            used_dark_line_search = True
+
+        side = roi.get("dark_line_edge_side", "right")
+        min_px = int(roi.get("edge_from_dark_line_min_px", 3))
+        max_px = int(roi.get("edge_from_dark_line_max_px", 35))
+
+        if side == "right":
+            search_i0 = int(max(0, dark_line_local_x + min_px))
+            search_i1 = int(min(len(signed_lsf), dark_line_local_x + max_px + 1))
+        elif side == "left":
+            search_i0 = int(max(0, dark_line_local_x - max_px))
+            search_i1 = int(min(len(signed_lsf), dark_line_local_x - min_px + 1))
+        else:
+            raise ValueError(f"Unsupported dark_line_edge_side: {side}")
+
+        if search_i1 <= search_i0:
+            search_i0 = 0
+            search_i1 = len(signed_lsf)
+
+        used_target_search = used_dark_line_search
+
+    else:
+        target_x = roi.get("target_x")
+        search_half_width = roi.get("search_half_width")
+
+        if target_x is None:
+            target_local_x = np.nan
+            search_i0 = 0
+            search_i1 = len(signed_lsf)
+        else:
+            if search_half_width is None:
+                search_half_width = len(signed_lsf) // 2
+
+            target_local_x = float(target_x) - float(roi["x0"])
+
+            search_i0 = int(max(0, round(target_local_x - search_half_width)))
+            search_i1 = int(min(len(signed_lsf), round(target_local_x + search_half_width + 1)))
+
+            if search_i1 <= search_i0:
+                search_i0 = 0
+                search_i1 = len(signed_lsf)
+
+        dark_line_local_x = np.nan
+        used_target_search = target_x is not None
+
+    search_signed = signed_lsf[search_i0:search_i1]
+
+    if edge_polarity == "positive":
+        search_profile = np.where(search_signed > 0, search_signed, 0)
+    elif edge_polarity == "negative":
+        search_profile = np.where(search_signed < 0, -search_signed, 0)
+    else:
+        search_profile = np.abs(search_signed)
+
+    if len(search_profile) < 1 or np.max(search_profile) <= 0:
+        search_profile = np.abs(search_signed)
+
+    if len(search_profile) < 1 or np.max(search_profile) <= 0:
+        peak_idx = int(np.argmax(np.abs(signed_lsf)))
+        return {
+            "peak_local_x": peak_idx,
+            "search_i0": 0,
+            "search_i1": len(signed_lsf),
+            "target_local_x": target_local_x,
+            "dark_line_local_x": dark_line_local_x,
+            "edge_polarity": edge_polarity,
+            "edge_search_mode": mode,
+            "used_target_search": False,
+        }
+
+    peak_idx = search_i0 + int(np.argmax(search_profile))
+
+    return {
+        "peak_local_x": int(peak_idx),
+        "search_i0": int(search_i0),
+        "search_i1": int(search_i1),
+        "target_local_x": float(target_local_x) if not np.isnan(target_local_x) else np.nan,
+        "dark_line_local_x": float(dark_line_local_x) if not np.isnan(dark_line_local_x) else np.nan,
+        "edge_polarity": edge_polarity,
+        "edge_search_mode": mode,
+        "used_target_search": bool(used_target_search),
+    }
 
 # -----------------------------
 # ROI metrics
@@ -391,7 +541,8 @@ def spatial_metrics_for_roi(
     raw_esf = cropped.mean(axis=0)
 
     # LSF from raw ESF. This is used for main Gaussian-fit metrics.
-    raw_lsf = np.abs(np.gradient(raw_esf))
+    signed_lsf = np.gradient(raw_esf)
+    raw_lsf = np.abs(signed_lsf)
 
     if SMOOTHING_ENABLED and SPATIAL_SMOOTHING_WINDOW > 1:
         esf_for_plot = smooth_profile(raw_esf, SPATIAL_SMOOTHING_WINDOW)
@@ -400,10 +551,17 @@ def spatial_metrics_for_roi(
         esf_for_plot = raw_esf
         lsf_for_plot = raw_lsf
 
+    peak_search = find_lsf_peak_near_target(
+        signed_lsf=signed_lsf,
+        roi=roi,
+        esf=raw_esf,
+    )
+
     if SPATIAL_LSF_GAUSSIAN_FIT_ENABLED:
         gaussian_fit = fit_gaussian_peak(
             raw_lsf,
             half_window=SPATIAL_LSF_FIT_HALF_WINDOW,
+            peak_index=peak_search["peak_local_x"],
         )
     else:
         gaussian_fit = {
@@ -457,6 +615,22 @@ def spatial_metrics_for_roi(
         # Fit quality
         "gaussian_fit_success": bool(gaussian_fit.get("fit_success", False)),
 
+        # Target-edge search diagnostics
+        "selected_edge_local_x_px": peak_search["peak_local_x"],
+        "selected_edge_x_px": roi["x0"] + peak_search["peak_local_x"],
+        "target_edge_x_px": roi.get("target_x", np.nan),
+        "edge_search_i0": peak_search["search_i0"],
+        "edge_search_i1": peak_search["search_i1"],
+        "edge_polarity": peak_search["edge_polarity"],
+        "edge_search_mode": peak_search["edge_search_mode"],
+        "dark_line_local_x_px": peak_search["dark_line_local_x"],
+        "dark_line_x_px": (
+            roi["x0"] + peak_search["dark_line_local_x"]
+            if not np.isnan(peak_search["dark_line_local_x"])
+            else np.nan
+        ),
+        "used_target_search": bool(peak_search["used_target_search"]),
+        
         # Diagnostics
         "lsf_fwhm_px": raw_lsf_fwhm_x,
         "edge_peak_fit_x_px": roi["x0"] + raw_edge_peak_fit_x,

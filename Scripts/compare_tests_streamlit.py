@@ -24,11 +24,11 @@ import json
 from datetime import date
 
 import pandas as pd
-import plotly.express as px
+import plotly.graph_objects as go
 import streamlit as st
 
 
-DEFAULT_RESULTS_ROOT = "."
+DEFAULT_RESULTS_ROOT = "/home/jcpe/Documents/Projects /FreezerTestSetup/Test_Results"
 
 
 METRIC_LABELS = {
@@ -131,9 +131,9 @@ def load_metrics(metric_file: str) -> pd.DataFrame:
     df["notes"] = notes
 
     if test_date:
-        df["plot_label"] = f"{camera_id} / {test_date}"
+        df["plot_label"] = f"{camera_id} / {test_date} / {test_dir.name}"
     else:
-        df["plot_label"] = camera_id
+        df["plot_label"] = f"{camera_id} / {test_dir.name}"
 
     return df
 
@@ -185,6 +185,14 @@ def make_plot_df(
     available_columns = [col for col in plot_columns if col in df.columns]
     plot_df = df[available_columns].dropna()
 
+    sort_cols = [
+        col for col in ["plot_label", x_col, "sweep_index"]
+        if col in plot_df.columns
+    ]
+
+    if sort_cols:
+        plot_df = plot_df.sort_values(sort_cols)
+
     return plot_df
 
 
@@ -210,36 +218,67 @@ def plot_overlay(
         st.info(f"No valid data for {label_for_column(y_col)}.")
         return
 
-    fig = px.line(
-        plot_df,
-        x=x_col,
-        y=y_col,
-        color="plot_label",
-        markers=show_markers,
-        hover_data=[
-            col for col in ["test_folder", "sweep_index"]
-            if col in plot_df.columns
-        ],
-        labels={
-            x_col: label_for_column(x_col),
-            y_col: label_for_column(y_col),
-            "plot_label": "Test",
-        },
-        title=title or f"{label_for_column(y_col)} vs {label_for_column(x_col)}",
-    )
+    fig = go.Figure()
+
+    mode = "lines+markers" if show_markers else "lines"
+
+    for plot_label, group_df in plot_df.groupby("plot_label", sort=False):
+        group_df = group_df.sort_values(x_col)
+
+        fig.add_trace(
+            go.Scatter(
+                x=group_df[x_col],
+                y=group_df[y_col],
+                mode=mode,
+                name=str(plot_label),
+                line=dict(width=2),
+                marker=dict(size=5),
+                connectgaps=False,
+                customdata=group_df[
+                    [col for col in ["test_folder", "sweep_index"] if col in group_df.columns]
+                ].to_numpy(),
+                hovertemplate=(
+                    "Test=%{fullData.name}<br>"
+                    f"{label_for_column(x_col)}=%{{x}}<br>"
+                    f"{label_for_column(y_col)}=%{{y}}<br>"
+                    "<extra></extra>"
+                ),
+            )
+        )
 
     fig.update_layout(
+        title=title or f"{label_for_column(y_col)} vs {label_for_column(x_col)}",
+        xaxis_title=label_for_column(x_col),
+        yaxis_title=label_for_column(y_col),
         legend_title_text="Test",
         hovermode="closest",
+        template="plotly_dark",
+        height=520,
+        paper_bgcolor="#0E1117",
+        plot_bgcolor="#0E1117",
+        font=dict(color="#F5F5F5"),
+        xaxis=dict(
+            gridcolor="rgba(255,255,255,0.15)",
+            zerolinecolor="rgba(255,255,255,0.25)",
+        ),
+        yaxis=dict(
+            gridcolor="rgba(255,255,255,0.15)",
+            zerolinecolor="rgba(255,255,255,0.25)",
+        ),
     )
 
     if chart_key is None:
         chart_key = f"plot_{x_col}_{y_col}_{abs(hash(title or ''))}"
-    
+
     st.plotly_chart(
         fig,
-        use_container_width=True,
+        width="stretch",
         key=chart_key,
+        theme=None,
+        config={
+            "responsive": True,
+            "displaylogo": False,
+        },
     )
 
 
@@ -356,7 +395,6 @@ def save_test_metadata(test_dir: Path, metadata: dict):
     # Clear Streamlit cache so the updated metadata is reloaded.
     load_metrics.clear()
     find_metric_files.clear()
-
 def metadata_editor(test_options: dict[str, str]):
     st.subheader("Edit test metadata")
 
@@ -370,10 +408,14 @@ def metadata_editor(test_options: dict[str, str]):
     test_dir = metric_path.parent.parent
     metadata = load_test_metadata(test_dir)
 
+    # Make widget keys unique for each selected test.
+    # This makes Streamlit load/show the correct values when switching tests.
+    key_prefix = "metadata_" + selected_test_name.replace("/", "_").replace(" ", "_")
+
     camera_id = st.text_input(
         "Camera ID",
         value=str(metadata.get("camera_id") or ""),
-        key="metadata_camera_id",
+        key=f"{key_prefix}_camera_id",
     )
 
     current_date_text = str(metadata.get("test_date") or "")
@@ -385,7 +427,7 @@ def metadata_editor(test_options: dict[str, str]):
     test_date = st.date_input(
         "Test date",
         value=current_date,
-        key="metadata_test_date",
+        key=f"{key_prefix}_test_date",
     )
 
     duration_value = metadata.get("test_duration_hours")
@@ -399,23 +441,23 @@ def metadata_editor(test_options: dict[str, str]):
         min_value=0.0,
         value=duration_value,
         step=0.5,
-        key="metadata_duration",
+        key=f"{key_prefix}_duration",
     )
 
     operator = st.text_input(
         "Operator",
         value=str(metadata.get("operator") or ""),
-        key="metadata_operator",
+        key=f"{key_prefix}_operator",
     )
 
     notes = st.text_area(
         "Notes",
         value=str(metadata.get("notes") or ""),
         height=120,
-        key="metadata_notes",
+        key=f"{key_prefix}_notes",
     )
 
-    if st.button("Save metadata"):
+    if st.button("Save metadata", key=f"{key_prefix}_save"):
         new_metadata = {
             "camera_id": camera_id,
             "test_date": test_date.isoformat(),
@@ -579,7 +621,7 @@ def main():
             index=0,
         )
 
-        show_markers = st.checkbox("Show markers", value=True)
+        show_markers = st.checkbox("Show markers", value=False)
 
     tabs = st.tabs([
         "Overview",
@@ -595,28 +637,63 @@ def main():
 
         st.subheader("Selected tests")
         overview_df = selected_test_overview(selected_test_names, test_options)
-        st.dataframe(overview_df, use_container_width=True)
+        st.dataframe(overview_df, width="stretch")
         
         with st.expander("Edit metadata"):
-            metadata_editor(test_options_all)
+            metadata_editor({
+                name: test_options[name]
+                for name in selected_test_names
+            })
 
         st.subheader("Temperature profile")
-        for temp_col in [
-            "temp_probe_1_c",
-            "temp_probe_2_c",
-            "temp_probe_3_c",
-            "temp_probe_4_c",
-            "temp_probe_5_c",
-        ]:
-            if temp_col in combined.columns:
+        
+        available_temp_cols = [
+            col for col in [
+                "temp_probe_1_c",
+                "temp_probe_2_c",
+                "temp_probe_3_c",
+                "temp_probe_4_c",
+                "temp_probe_5_c",
+            ]
+            if col in combined.columns
+        ]
+        
+        if available_temp_cols:
+            show_all_temperature_probes = st.checkbox(
+                "Show all temperature probes",
+                value=False,
+                key="overview_show_all_temperature_probes",
+            )
+        
+            if show_all_temperature_probes:
+                for temp_col in available_temp_cols:
+                    plot_overlay(
+                        df=combined,
+                        x_col="sweep_index",
+                        y_col=temp_col,
+                        title=f"{label_for_column(temp_col)} vs sweep index",
+                        show_markers=show_markers,
+                        chart_key=f"overview_temperature_{temp_col}",
+                    )
+            else:
+                overview_temp_col = st.selectbox(
+                    "Temperature probe to show",
+                    options=available_temp_cols,
+                    format_func=label_for_column,
+                    index=0,
+                    key="overview_temperature_probe",
+                )
+        
                 plot_overlay(
                     df=combined,
                     x_col="sweep_index",
-                    y_col=temp_col,
-                    title=f"{label_for_column(temp_col)} vs sweep index",
+                    y_col=overview_temp_col,
+                    title=f"{label_for_column(overview_temp_col)} vs sweep index",
                     show_markers=show_markers,
-                    chart_key=f"overview_temperature_{temp_col}",
+                    chart_key=f"overview_temperature_{overview_temp_col}",
                 )
+        else:
+            st.info("No temperature probe columns found.")
 
     with tabs[1]:
         st.header("Spectral resolution")
@@ -740,7 +817,7 @@ def main():
 
         with st.expander("Show plotted data"):
             plot_df = make_plot_df(combined, x_col, custom_y_col)
-            st.dataframe(plot_df, use_container_width=True)
+            st.dataframe(plot_df, width="stretch")
 
 
 if __name__ == "__main__":
