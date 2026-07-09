@@ -52,6 +52,10 @@ class TemperatureLogger:
                 self._controller.lamp_off()
             except Exception:
                 pass
+            try:
+                self._controller.freezer_off()
+            except Exception:
+                pass
             self._controller.disconnect()
             self._controller = None
 
@@ -105,6 +109,26 @@ class TemperatureLogger:
             if self._controller is None:
                 raise RuntimeError("TemperatureLogger is not running.")
             self._controller.lamp_off()
+            self._latest_record = self._controller.read_all()
+            return self._latest_record
+        
+        
+    def freezer_on(self):
+        with self._lock:
+            if self._controller is None:
+                raise RuntimeError("TemperatureLogger is not running.")
+    
+            self._controller.freezer_on()
+            self._latest_record = self._controller.read_all()
+            return self._latest_record
+    
+    
+    def freezer_off(self):
+        with self._lock:
+            if self._controller is None:
+                raise RuntimeError("TemperatureLogger is not running.")
+    
+            self._controller.freezer_off()
             self._latest_record = self._controller.read_all()
             return self._latest_record
         

@@ -33,6 +33,16 @@ CAMERA_POWER_ACTIVE_STATE = 1
 CAMERA_POWER_BOOT_WAIT_S = 45.0
 CAMERA_POWER_OFF_AT_TEST_END = True
 
+# Freezer contactor control through MCC DIO
+FREEZER_CONTROL_ENABLED = True
+FREEZER_DIO_BIT = 3
+FREEZER_ACTIVE_STATE = 1
+
+# Compressor protection for manual/test scripts
+FREEZER_MIN_OFF_TIME_S = 10 * 60
+FREEZER_TEST_ON_TIME_S = 10 * 60
+
+
 
 CAMERA_IP = "10.100.10.100"
 CAMERA_USER = "root"
@@ -65,6 +75,8 @@ LAMP_WARMUP_S = 2.0
 CAMERA_ID = "unknown_camera"
 TEST_OPERATOR = "JCPE"
 TEST_NOTES = ""
+
+
 
 
 try:

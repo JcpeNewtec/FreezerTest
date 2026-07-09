@@ -27,6 +27,9 @@ from Config.system_config import (
     CAMERA_POWER_DIO_BIT,
     CAMERA_POWER_ACTIVE_STATE,
     CAMERA_POWER_CONTROL_ENABLED,
+    FREEZER_CONTROL_ENABLED,
+    FREEZER_DIO_BIT,
+    FREEZER_ACTIVE_STATE,
 )
 
 DIO_PORT = DigitalPortType.AUXPORT0
@@ -58,6 +61,7 @@ class TemperatureController:
         self.ai_device = None
         self.ai_config = None
         self.dio_device = None
+        self.freezer_state = False
         self.lamp_state = False
         self.camera_power_state = None
         
@@ -80,6 +84,10 @@ class TemperatureController:
         self.dio_device.d_config_bit(LAMP_DIO_PORT, LAMP_DIO_BIT, DigitalDirection.OUTPUT)
         self.lamp_off()
         
+        if FREEZER_CONTROL_ENABLED:
+            self.dio_device.d_config_bit(DIO_PORT, FREEZER_DIO_BIT, DigitalDirection.OUTPUT)
+            self.freezer_off()
+        
         if CAMERA_POWER_CONTROL_ENABLED:
             self.dio_device.d_config_bit(
                 CAMERA_POWER_DIO_PORT,
@@ -100,6 +108,33 @@ class TemperatureController:
     def lamp_off(self):
         self.dio_device.d_bit_out(LAMP_DIO_PORT, LAMP_DIO_BIT, 0)
         self.lamp_state = False
+        
+    def freezer_on(self):
+        if not FREEZER_CONTROL_ENABLED:
+            self.freezer_state = False
+            return
+    
+        self.dio_device.d_bit_out(
+            DIO_PORT,
+            FREEZER_DIO_BIT,
+            FREEZER_ACTIVE_STATE,
+        )
+        self.freezer_state = True
+    
+    
+    def freezer_off(self):
+        if not FREEZER_CONTROL_ENABLED:
+            self.freezer_state = False
+            return
+    
+        inactive_state = 0 if FREEZER_ACTIVE_STATE == 1 else 1
+    
+        self.dio_device.d_bit_out(
+            DIO_PORT,
+            FREEZER_DIO_BIT,
+            inactive_state,
+        )
+        self.freezer_state = False
         
     def camera_power_on(self):
         if not CAMERA_POWER_CONTROL_ENABLED:
@@ -134,6 +169,11 @@ class TemperatureController:
                 pass
             
             try:
+                self.freezer_off()
+            except Exception:
+                pass
+            
+            try:
                 self.daq_device.disconnect()
             except Exception:
                 pass
@@ -155,6 +195,7 @@ class TemperatureController:
             "temperatures_c": {},
             "errors": {},
             "lamp_state": self.lamp_state,
+            "freezer_state": self.freezer_state,
             "camera_power_state": self.camera_power_state,
         }
 

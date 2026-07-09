@@ -2,36 +2,33 @@
 # -*- coding: utf-8 -*-
 
 """
-Simple freezer relay test.
+Test freezer contactor control through MCC DIO3.
 
-Purpose:
-    Toggle the freezer contactor through MCC DIO3 with long delays
-    so the compressor is not rapidly cycled.
+This uses the existing FreezerTest control architecture:
+    TemperatureLogger -> TemperatureController -> uldaq DIO
 
 Run from repo root:
 
     PYTHONPATH=. python3 Scripts/test_freezer_relay.py
 
-Stop safely with Ctrl+C. The script will try to turn the freezer OFF.
+Default behavior:
+    freezer OFF
+    freezer ON for 10 minutes
+    freezer OFF
+    wait 10 minutes
+
+The long waits protect the compressor from rapid cycling.
 """
 
+import argparse
 import time
 from datetime import datetime
 
-from mcculw import ul
-from mcculw.enums import DigitalPortType, DigitalIODirection
-
-
-BOARD_NUM = 0
-PORT_TYPE = DigitalPortType.AUXPORT
-
-FREEZER_DIO_BIT = 3
-FREEZER_ACTIVE_STATE = 1
-FREEZER_INACTIVE_STATE = 0
-
-# Use 600 s = 10 min for compressor-friendly testing.
-ON_TIME_S = 10 * 60
-OFF_TIME_S = 10 * 60
+from Control.temperature_logger import TemperatureLogger
+from Config.system_config import (
+    FREEZER_MIN_OFF_TIME_S,
+    FREEZER_TEST_ON_TIME_S,
+)
 
 
 def log(message: str):
@@ -39,35 +36,11 @@ def log(message: str):
     print(f"[{now}] {message}", flush=True)
 
 
-def configure_dio():
-    ul.d_config_bit(
-        BOARD_NUM,
-        PORT_TYPE,
-        FREEZER_DIO_BIT,
-        DigitalIODirection.OUT,
-    )
-
-
-def set_freezer(state: bool):
-    value = FREEZER_ACTIVE_STATE if state else FREEZER_INACTIVE_STATE
-
-    ul.d_bit_out(
-        BOARD_NUM,
-        PORT_TYPE,
-        FREEZER_DIO_BIT,
-        value,
-    )
-
-    if state:
-        log(f"FREEZER ON  - DIO{FREEZER_DIO_BIT} = {value}")
-    else:
-        log(f"FREEZER OFF - DIO{FREEZER_DIO_BIT} = {value}")
-
-
 def wait_with_countdown(seconds: int, label: str):
     log(f"Waiting {seconds} s: {label}")
 
-    remaining = seconds
+    remaining = int(seconds)
+
     while remaining > 0:
         step = min(60, remaining)
         time.sleep(step)
@@ -76,35 +49,69 @@ def wait_with_countdown(seconds: int, label: str):
 
 
 def main():
-    log("Configuring MCC DIO")
-    configure_dio()
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--on-time-s",
+        type=int,
+        default=int(FREEZER_TEST_ON_TIME_S),
+        help="How long to keep the freezer ON.",
+    )
+    parser.add_argument(
+        "--off-time-s",
+        type=int,
+        default=int(FREEZER_MIN_OFF_TIME_S),
+        help="How long to wait after turning freezer OFF.",
+    )
+    parser.add_argument(
+        "--skip-final-wait",
+        action="store_true",
+        help="Turn freezer OFF at the end but do not wait afterward.",
+    )
+    args = parser.parse_args()
+
+    logger = TemperatureLogger(
+        log_path="freezer_relay_test_log.jsonl",
+        interval_s=1.0,
+    )
+
+    log("Starting TemperatureLogger / MCC connection")
+    logger.start()
 
     try:
-        # Start from a known safe state.
-        set_freezer(False)
+        log("Initial safe state: freezer OFF")
+        record = logger.freezer_off()
+        print(record, flush=True)
+
         time.sleep(2)
 
-        set_freezer(True)
-        wait_with_countdown(ON_TIME_S, "freezer ON period")
+        log("Turning freezer ON")
+        record = logger.freezer_on()
+        print(record, flush=True)
 
-        set_freezer(False)
-        wait_with_countdown(OFF_TIME_S, "compressor OFF protection period")
+        wait_with_countdown(args.on_time_s, "freezer ON period")
 
-        set_freezer(True)
-        wait_with_countdown(ON_TIME_S, "freezer ON period")
+        log("Turning freezer OFF")
+        record = logger.freezer_off()
+        print(record, flush=True)
 
-        set_freezer(False)
+        if not args.skip_final_wait:
+            wait_with_countdown(args.off_time_s, "compressor OFF protection period")
+
         log("Freezer relay test complete")
 
     except KeyboardInterrupt:
         log("Interrupted by user")
 
     finally:
-        log("Safety shutdown: turning freezer OFF")
+        log("Safety shutdown: freezer OFF")
         try:
-            set_freezer(False)
+            record = logger.freezer_off()
+            print(record, flush=True)
         except Exception as e:
-            log(f"Failed to turn freezer OFF: {e}")
+            log(f"Could not turn freezer OFF cleanly: {e}")
+
+        logger.stop()
+        log("Logger stopped")
 
 
 if __name__ == "__main__":
