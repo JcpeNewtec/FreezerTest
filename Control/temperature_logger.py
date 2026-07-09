@@ -52,10 +52,17 @@ class TemperatureLogger:
                 self._controller.lamp_off()
             except Exception:
                 pass
+        
             try:
                 self._controller.freezer_off()
             except Exception:
                 pass
+        
+            try:
+                self._controller.camera_power_off()
+            except Exception:
+                pass
+        
             self._controller.disconnect()
             self._controller = None
 
