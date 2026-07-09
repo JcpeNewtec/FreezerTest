@@ -120,5 +120,5 @@ SPATIAL_LSF_FIT_HALF_WINDOW = 5
 
 # Debug profile plots
 # Turn this on while tuning ROIs/metrics.
-DEBUG_PROFILE_PLOTS = True
+DEBUG_PROFILE_PLOTS = False
 DEBUG_PROFILE_PLOT_MAX_SWEEPS = 1
