@@ -41,19 +41,22 @@ OUTPUT_FILE = Path("calibrated_filter_positions.json")
 def print_help():
     print("""
 Commands:
-  p                 show current motor position
-  home              run Hall sensor homing and set position to 0
-  g <pos>           go to absolute position, e.g. g 600
-  j <steps>         jog relative steps, e.g. j 10 or j -10
-  f <1-8>           go to configured filter position
-  s <1-8>           save current position as filter number
-  l on              lamp on
-  l off             lamp off
-  show              show saved calibration
-  save              write calibration to calibrated_filter_positions.json
-  q                 quit
-""")
+  p              show current motor position
+  home           run Hall sensor homing and set position to 0
+  g <pos>        go to absolute position, e.g. g 600
+  j <steps>      jog relative steps, e.g. j 10 or j -10
+  f <1-8>        go to configured filter position
+  s <1-8>        save current position as filter number
 
+  l on           lamp on
+  l off          lamp off
+  c on           camera power on
+  c off          camera power off
+
+  show           show saved calibration
+  save           write calibration to calibrated_filter_positions.json
+  q              quit
+""")
 
 def main():
     positions = dict(FILTER_POSITIONS)
@@ -156,6 +159,29 @@ def main():
                     print("Lamp OFF")
                 else:
                     print("Use: l on OR l off")
+                    
+            elif cmd[0] == "c" and len(cmd) == 2:
+                if lamp is None:
+                    print("Camera power control not available because TemperatureLogger is not running.")
+                    continue
+            
+                if cmd[1] == "on":
+                    # Important because the freezer contactor uses the camera 24 V supply.
+                    # The camera and freezer should not be enabled at the same time.
+                    try:
+                        lamp.freezer_off()
+                    except Exception as e:
+                        print(f"Warning: could not explicitly turn freezer OFF first: {e}")
+            
+                    lamp.camera_power_on()
+                    print("Camera power ON")
+            
+                elif cmd[1] == "off":
+                    lamp.camera_power_off()
+                    print("Camera power OFF")
+            
+                else:
+                    print("Use: c on OR c off")
 
             elif cmd[0] == "show":
                 print(json.dumps(positions, indent=4))
