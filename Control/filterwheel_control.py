@@ -23,6 +23,7 @@ class FilterwheelController:
         position_tolerance: int = 5,
         settle_time_s: float = 0.2,
         move_timeout_s: float = 10.0,
+        deenergize_after_move: bool = True,
     ):
         self.tic_serial = tic_serial
         self.filter_positions = filter_positions or {}
@@ -35,6 +36,8 @@ class FilterwheelController:
         self.position_tolerance = position_tolerance
         self.settle_time_s = settle_time_s
         self.move_timeout_s = move_timeout_s
+        self.deenergize_after_move = deenergize_after_move
+        self._is_energized = False
 
     def _base_cmd(self) -> list[str]:
         tic_path = shutil.which("ticcmd")
@@ -59,11 +62,20 @@ class FilterwheelController:
 
         return result.stdout.strip()
 
-
-    def initialize(self, set_zero_here: bool = False):
-
+    def energize(self):
+        """Enable motor current and exit safe-start before motion."""
         self._run("--energize")
         self._run("--exit-safe-start")
+        self._is_energized = True
+
+    def deenergize(self):
+        """Disable motor current to avoid heating while idle."""
+        self._run("--deenergize")
+        self._is_energized = False
+
+    def initialize(self, set_zero_here: bool = False):
+        # Energize briefly so the Tic is in a known usable state, then apply settings.
+        self.energize()
 
         self._run("--step-mode", str(self.step_mode))
         self._run("--current", str(self.current_limit_ma))
@@ -75,6 +87,9 @@ class FilterwheelController:
         if set_zero_here:
             self.set_zero_here()
 
+        if self.deenergize_after_move:
+            self.deenergize()
+
     def shutdown(self):
         try:
             self._run("--enter-safe-start")
@@ -82,7 +97,7 @@ class FilterwheelController:
             pass
 
         try:
-            self._run("--deenergize")
+            self.deenergize()
         except Exception:
             pass
 
@@ -101,9 +116,15 @@ class FilterwheelController:
 
         raise FilterwheelError("Could not parse current position from ticcmd status output.")
 
-    def move_to_position(self, position: int):
-        self._run("--position", str(position))
-        self.wait_until_reached(position)
+    def move_to_position(self, position: int, keep_energized: bool = False):
+        self.energize()
+
+        try:
+            self._run("--position", str(position))
+            self.wait_until_reached(position)
+        finally:
+            if self.deenergize_after_move and not keep_energized:
+                self.deenergize()
 
     def wait_until_reached(self, target: int):
         start_time = time.time()
@@ -133,7 +154,7 @@ class FilterwheelController:
 
     def return_to_zero(self):
         self.move_to_position(0)
-    
+
     def home_with_hall(
         self,
         is_hall_active,
@@ -148,67 +169,80 @@ class FilterwheelController:
         print("Starting Hall homing...")
         t0 = time.monotonic()
 
-        start_position = self.get_current_position()
+        # Keep the motor energized during the homing sequence itself,
+        # but de-energize again afterward. This avoids repeated on/off cycles
+        # for every small Hall-search step.
+        self.energize()
 
-        def step_relative(delta: int):
-            current = self.get_current_position()
-            target = current + delta
-            self.move_to_position(target)
-            return self.get_current_position()
+        try:
+            start_position = self.get_current_position()
 
-        # Phase 1: if already on the magnet, move away until inactive.
-        travelled = 0
-        if is_hall_active():
-            print("Hall already active. Moving away from magnet...")
-        while is_hall_active():
-            step_relative(-search_direction * fast_step)
-            travelled += abs(fast_step)
-            if travelled > max_steps:
-                raise FilterwheelError("Homing failed while moving away from Hall sensor.")
+            def step_relative(delta: int):
+                current = self.get_current_position()
+                target = current + delta
+                self.move_to_position(target, keep_energized=True)
+                return self.get_current_position()
 
-        # Phase 2: fast search toward magnet.
-        print("Fast search toward Hall edge...")
-        travelled = 0
-        while not is_hall_active():
-            step_relative(search_direction * fast_step)
-            travelled += abs(fast_step)
-            if travelled > max_steps:
-                raise FilterwheelError(
-                    f"Homing failed: Hall sensor not found. Started at {start_position}."
-                )
+            # Phase 1: if already on the magnet, move away until inactive.
+            travelled = 0
+            if is_hall_active():
+                print("Hall already active. Moving away from magnet...")
+            while is_hall_active():
+                step_relative(-search_direction * fast_step)
+                travelled += abs(fast_step)
+                if travelled > max_steps:
+                    raise FilterwheelError("Homing failed while moving away from Hall sensor.")
 
-        fast_hit_position = self.get_current_position()
+            # Phase 2: fast search toward magnet.
+            print("Fast search toward Hall edge...")
+            travelled = 0
+            while not is_hall_active():
+                step_relative(search_direction * fast_step)
+                travelled += abs(fast_step)
+                if travelled > max_steps:
+                    raise FilterwheelError(
+                        f"Homing failed: Hall sensor not found. Started at {start_position}."
+                    )
 
-        # Phase 3: back away slowly until inactive.
-        print("Backing out of Hall active region...")
-        while is_hall_active():
-            step_relative(-search_direction * slow_step)
+            fast_hit_position = self.get_current_position()
 
-        inactive_edge_position = self.get_current_position()
+            # Phase 3: back away slowly until inactive.
+            print("Backing out of Hall active region...")
+            while is_hall_active():
+                step_relative(-search_direction * slow_step)
 
-        # Phase 4: final slow approach toward active edge.
-        print("Final slow approach to Hall edge...")
-        while not is_hall_active():
-            step_relative(search_direction * slow_step)
+            inactive_edge_position = self.get_current_position()
 
-        edge_position = self.get_current_position()
+            # Phase 4: final slow approach toward active edge.
+            print("Final slow approach to Hall edge...")
+            while not is_hall_active():
+                step_relative(search_direction * slow_step)
 
-        self.set_zero_here()
+            edge_position = self.get_current_position()
 
-        homing_duration_s = time.monotonic() - t0
-        print(
-            f"Hall edge found at motor position {edge_position}. "
-            f"Homing duration: {homing_duration_s:.2f} s"
-        )
-        print("Filterwheel home set to 0.")
+            self.set_zero_here()
 
-        return {
-            "start_position": start_position,
-            "fast_hit_position": fast_hit_position,
-            "inactive_edge_position": inactive_edge_position,
-            "edge_position_before_zero": edge_position,
-            "search_direction": search_direction,
-            "fast_step": fast_step,
-            "slow_step": slow_step,
-            "duration_s": round(homing_duration_s, 3),
-        }
+            homing_duration_s = time.monotonic() - t0
+            print(
+                f"Hall edge found at motor position {edge_position}. "
+                f"Homing duration: {homing_duration_s:.2f} s"
+            )
+            print("Filterwheel home set to 0.")
+
+            return {
+                "start_position": start_position,
+                "fast_hit_position": fast_hit_position,
+                "inactive_edge_position": inactive_edge_position,
+                "edge_position_before_zero": edge_position,
+                "search_direction": search_direction,
+                "fast_step": fast_step,
+                "slow_step": slow_step,
+                "duration_s": round(homing_duration_s, 3),
+            }
+
+        finally:
+            if self.deenergize_after_move:
+                try:
+                    self.deenergize()
+                except Exception:
+                    pass

@@ -17,6 +17,7 @@ from Config.system_config import (
     FILTERWHEEL_POSITION_TOLERANCE,
     FILTERWHEEL_SETTLE_TIME_S,
     FILTERWHEEL_MOVE_TIMEOUT_S,
+    FILTERWHEEL_DEENERGIZE_AFTER_MOVE,
     CAMERA_IP,
     CAMERA_USER,
     REMOTE_CAPTURE_SCRIPT,
@@ -168,6 +169,7 @@ def run_single_sweep(
         position_tolerance=FILTERWHEEL_POSITION_TOLERANCE,
         settle_time_s=FILTERWHEEL_SETTLE_TIME_S,
         move_timeout_s=FILTERWHEEL_MOVE_TIMEOUT_S,
+        deenergize_after_move=FILTERWHEEL_DEENERGIZE_AFTER_MOVE,
     )
 
     try:

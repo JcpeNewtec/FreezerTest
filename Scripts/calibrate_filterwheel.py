@@ -22,6 +22,7 @@ from Config.system_config import (
     FILTERWHEEL_POSITION_TOLERANCE,
     FILTERWHEEL_SETTLE_TIME_S,
     FILTERWHEEL_MOVE_TIMEOUT_S,
+    FILTERWHEEL_DEENERGIZE_AFTER_MOVE,
     FILTERWHEEL_HOME_SEARCH_DIRECTION,
     FILTERWHEEL_HOME_FAST_STEP,
     FILTERWHEEL_HOME_SLOW_STEP,
@@ -42,6 +43,9 @@ def print_help():
     print("""
 Commands:
   p              show current motor position
+  status         show full Tic status
+  m on           energize motor manually
+  m off          de-energize motor manually
   home           run Hall sensor homing and set position to 0
   g <pos>        go to absolute position, e.g. g 600
   j <steps>      jog relative steps, e.g. j 10 or j -10
@@ -73,6 +77,7 @@ def main():
         position_tolerance=FILTERWHEEL_POSITION_TOLERANCE,
         settle_time_s=FILTERWHEEL_SETTLE_TIME_S,
         move_timeout_s=FILTERWHEEL_MOVE_TIMEOUT_S,
+        deenergize_after_move=FILTERWHEEL_DEENERGIZE_AFTER_MOVE,
     )
 
     lamp = None
@@ -102,6 +107,19 @@ def main():
 
             elif cmd[0] == "p":
                 print(f"Current position: {fw.get_current_position()}")
+
+            elif cmd[0] == "status":
+                print(fw.get_status())
+
+            elif cmd[0] == "m" and len(cmd) == 2:
+                if cmd[1] == "on":
+                    fw.energize()
+                    print("Motor energized")
+                elif cmd[1] == "off":
+                    fw.deenergize()
+                    print("Motor de-energized")
+                else:
+                    print("Use: m on OR m off")
 
             elif cmd[0] == "g" and len(cmd) == 2:
                 pos = int(cmd[1])

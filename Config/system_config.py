@@ -17,6 +17,11 @@ FILTERWHEEL_POSITION_TOLERANCE = 5
 FILTERWHEEL_SETTLE_TIME_S = 0.2
 FILTERWHEEL_MOVE_TIMEOUT_S = 10.0
 
+# Reduce long-run stepper heating.
+# True means the Tic is energized only while actively moving/homing,
+# then de-energized while the wheel is idle or images are captured.
+FILTERWHEEL_DEENERGIZE_AFTER_MOVE = True
+
 HALL_DIO_BIT = 1
 HALL_ACTIVE_STATE = 0
 
