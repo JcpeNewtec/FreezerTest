@@ -705,6 +705,50 @@ def get_temperature(summary: dict) -> dict:
 
 
 
+def _safe_column_name(text: str) -> str:
+    safe = []
+
+    for char in str(text).lower():
+        if char.isalnum():
+            safe.append(char)
+        else:
+            safe.append("_")
+
+    result = "".join(safe)
+
+    while "__" in result:
+        result = result.replace("__", "_")
+
+    return result.strip("_") or "sensor"
+
+
+def add_camera_internal_temperatures_to_result(summary: dict, result: dict):
+    """Flatten camera-internal temperature readings from sweep_summary.json.
+
+    Expected source format is sweep_summary["camera_internal_temperature_readings"],
+    where each record has label/status and a remote_payload with a sensors dict.
+    """
+    readings = summary.get("camera_internal_temperature_readings") or []
+
+    for reading in readings:
+        label = _safe_column_name(reading.get("label", "reading"))
+        result[f"camera_internal_{label}_status"] = reading.get("status")
+
+        payload = reading.get("remote_payload") or {}
+        sensors = payload.get("sensors") or {}
+        errors = payload.get("errors") or reading.get("error")
+
+        if errors:
+            result[f"camera_internal_{label}_errors"] = json.dumps(errors)
+
+        for sensor_key, info in sensors.items():
+            sensor_name = info.get("name") or info.get("label") or sensor_key
+            sensor_column = _safe_column_name(sensor_name)
+
+            if "temp_c" in info:
+                result[f"camera_internal_{label}_{sensor_column}_c"] = info.get("temp_c")
+
+
 def analyze_sweep(
     sweep_dir: Path,
     debug_dir: Path | None = None,
@@ -726,6 +770,8 @@ def analyze_sweep(
     temps = get_temperature(summary)
     for name, value in temps.items():
         result[f"temp_{name}_c"] = value
+
+    add_camera_internal_temperatures_to_result(summary, result)
 
     for filt in summary.get("filters", []):
         filter_number = filt["filter_number"]
@@ -913,7 +959,15 @@ def add_delta_columns(df: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
 
 def make_primary_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     primary_cols = [col for col in PRIMARY_METRIC_COLUMNS if col in df.columns]
-    return df[primary_cols]
+
+    camera_internal_cols = [
+        col for col in df.columns
+        if col.startswith("camera_internal_")
+        and col.endswith("_c")
+        and col not in primary_cols
+    ]
+
+    return df[primary_cols + camera_internal_cols]
 
 
 # -----------------------------

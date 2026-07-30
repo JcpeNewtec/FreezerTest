@@ -21,6 +21,9 @@ from Config.system_config import (
     CAMERA_IP,
     CAMERA_USER,
     REMOTE_CAPTURE_SCRIPT,
+    REMOTE_CAMERA_TEMPERATURE_SCRIPT,
+    REMOTE_CAMERA_TEMPERATURE_DEVICE,
+    CAMERA_INTERNAL_TEMPERATURE_ENABLED,
     REMOTE_DATA_ROOT,
     LOCAL_DATA_ROOT,
     FILTERWHEEL_HOME_ENABLED,
@@ -66,6 +69,60 @@ def remote_capture(remote_output_path: str, exposure_time_absolute: int | None =
 
     result = run_ssh(command, timeout=60)
     return result.stdout.strip()
+
+
+def remote_read_camera_temperatures(label: str) -> dict:
+    """Read internal camera temperatures on the camera via SSH.
+
+    This is deliberately non-fatal: if the script is missing or one sensor
+    cannot be read, the sweep should still continue. The returned record is
+    written into sweep_summary.json.
+    """
+    record = {
+        "label": label,
+        "host_timestamp": iso_now(),
+        "enabled": CAMERA_INTERNAL_TEMPERATURE_ENABLED,
+        "status": "disabled",
+    }
+
+    if not CAMERA_INTERNAL_TEMPERATURE_ENABLED:
+        return record
+
+    command = [
+        "python3",
+        REMOTE_CAMERA_TEMPERATURE_SCRIPT,
+        "--device",
+        REMOTE_CAMERA_TEMPERATURE_DEVICE,
+    ]
+
+    try:
+        result = run_ssh(command, timeout=20)
+        output = result.stdout.strip()
+
+        if not output:
+            record.update({
+                "status": "failed",
+                "error": "camera temperature script returned empty stdout",
+            })
+            return record
+
+        # The remote script should print one JSON object. If extra text ever
+        # appears, parse the last non-empty line as a fallback.
+        json_line = output.splitlines()[-1]
+        payload = json.loads(json_line)
+
+        record.update({
+            "status": "success",
+            "remote_payload": payload,
+        })
+
+    except Exception as exc:
+        record.update({
+            "status": "failed",
+            "error": str(exc),
+        })
+
+    return record
 
 
 def remote_make_dir(remote_dir: str):
@@ -155,6 +212,7 @@ def run_single_sweep(
         "sweep_started_at": sweep_started_at,
         "temperature_before_sweep": temperature_before_sweep,
         "temperature_after_sweep": temperature_after_sweep,
+        "camera_internal_temperature_readings": [],
     }
 
     filterwheel = FilterwheelController(
@@ -197,6 +255,11 @@ def run_single_sweep(
             }
         else:
             sweep_summary["homing"] = {"enabled": False}
+
+        print("Reading camera internal temperatures before capture...")
+        sweep_summary["camera_internal_temperature_readings"].append(
+            remote_read_camera_temperatures("before_capture")
+        )
             
         lamp_was_turned_on = False
         
@@ -248,6 +311,11 @@ def run_single_sweep(
                 print("Turning lamp OFF after final capture...")
                 lamp_off_callback()
                 sweep_summary["lamp"]["off_after_capture"] = True
+
+            print("Reading camera internal temperatures after capture...")
+            sweep_summary["camera_internal_temperature_readings"].append(
+                remote_read_camera_temperatures("after_capture")
+            )
 
         print("Returning filterwheel to zero...")
         filterwheel.return_to_zero()

@@ -93,7 +93,17 @@ PREFERRED_CUSTOM_METRICS = [
 
 
 def label_for_column(column: str) -> str:
-    return METRIC_LABELS.get(column, column)
+    if column in METRIC_LABELS:
+        return METRIC_LABELS[column]
+
+    if column.startswith("camera_internal_") and column.endswith("_c"):
+        label = column.removeprefix("camera_internal_").removesuffix("_c")
+        label = label.replace("before_capture_", "Before capture: ")
+        label = label.replace("after_capture_", "After capture: ")
+        label = label.replace("_", " ")
+        return f"Camera internal {label} [C]"
+
+    return column
 
 
 @st.cache_data(show_spinner=False)
@@ -164,6 +174,13 @@ def sort_metrics(columns: list[str]) -> list[str]:
     preferred = [col for col in PREFERRED_CUSTOM_METRICS if col in columns]
     remaining = sorted([col for col in columns if col not in preferred])
     return preferred + remaining
+
+
+def camera_internal_temperature_columns(df: pd.DataFrame) -> list[str]:
+    return sorted([
+        col for col in df.columns
+        if col.startswith("camera_internal_") and col.endswith("_c")
+    ])
 
 
 def make_plot_df(
@@ -629,6 +646,7 @@ def main():
         "Spectral shift",
         "Spatial performance",
         "Signal stability",
+        "Camera internal temperatures",
         "Custom plot",
     ])
 
@@ -788,6 +806,38 @@ def main():
         )
 
     with tabs[5]:
+        st.header("Camera internal temperatures")
+
+        st.markdown(
+            "Internal camera/module temperatures read from the camera computer. "
+            "These values are stored once before image capture and once after image capture for each sweep."
+        )
+
+        internal_temp_cols = camera_internal_temperature_columns(combined)
+
+        if not internal_temp_cols:
+            st.info("No camera-internal temperature columns found. Re-run analysis on tests acquired after the camera temperature integration was added.")
+        else:
+            selected_internal_temp_cols = st.multiselect(
+                "Camera-internal temperature sensors to plot",
+                options=internal_temp_cols,
+                default=internal_temp_cols[: min(6, len(internal_temp_cols))],
+                format_func=label_for_column,
+                key="camera_internal_temperature_columns",
+            )
+
+            plot_metric_group(
+                df=combined,
+                x_col=x_col,
+                show_markers=show_markers,
+                key_prefix="camera_internal_temperatures",
+                metrics=[
+                    (col, label_for_column(col))
+                    for col in selected_internal_temp_cols
+                ],
+            )
+
+    with tabs[6]:
         st.header("Custom plot")
 
         custom_metric_options = sort_metrics([

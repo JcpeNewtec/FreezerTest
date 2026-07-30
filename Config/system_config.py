@@ -72,6 +72,9 @@ FREEZER_TEST_ON_TIME_S = 10 * 60
 CAMERA_IP = "10.100.10.100"
 CAMERA_USER = "root"
 REMOTE_CAPTURE_SCRIPT = "/root/scripts/capture_remote.py"
+REMOTE_CAMERA_TEMPERATURE_SCRIPT = "/root/scripts/read_camera_temperatures.py"
+REMOTE_CAMERA_TEMPERATURE_DEVICE = "/dev/video4"
+CAMERA_INTERNAL_TEMPERATURE_ENABLED = True
 REMOTE_DATA_ROOT = "/root/scripts/data"
 
 

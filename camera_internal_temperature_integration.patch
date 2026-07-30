@@ -1,0 +1,560 @@
+diff --git a/Camera_scripts/read_camera_temperatures.py b/Camera_scripts/read_camera_temperatures.py
+new file mode 100644
+index 0000000..eea0670
+--- /dev/null
++++ b/Camera_scripts/read_camera_temperatures.py
+@@ -0,0 +1,227 @@
++#!/usr/bin/env python3
++# -*- coding: utf-8 -*-
++
++"""
++Read internal camera/system temperatures on the camera computer.
++
++This script is intended to be run on the camera over SSH from the host PC.
++It prints one JSON object to stdout and does not require any arguments.
++
++Example on camera:
++    python3 /root/scripts/read_camera_temperatures.py --device /dev/video4
++"""
++
++import argparse
++import json
++import re
++import subprocess
++import time
++from datetime import datetime
++
++
++DRIVER_FRIENDLY_NAMES = {
++    "k10temp": "CPU",
++    "coretemp": "CPU",
++    "amdgpu": "GPU",
++    "nouveau": "GPU",
++    "nvidia": "GPU",
++    "axi_hwmon": "FPGA",
++    "lm73": "Sensor PCB",
++    "jc42": "PCB",
++}
++
++_BUS_TYPES = ("isa", "pci", "i2c", "acpi", "spi")
++_CHIP_DRIVER_RE = re.compile(r"^(.+?)-(?:" + "|".join(_BUS_TYPES) + r")-")
++
++
++def _driver_name(chip: str) -> str:
++    match = _CHIP_DRIVER_RE.match(chip)
++    return match.group(1) if match else chip
++
++
++def _friendly_for_driver(driver: str) -> str:
++    if driver in DRIVER_FRIENDLY_NAMES:
++        return DRIVER_FRIENDLY_NAMES[driver]
++    stripped = re.sub(r"\d+$", "", driver)
++    return DRIVER_FRIENDLY_NAMES.get(stripped, driver)
++
++
++def _apply_friendly_names(result: dict) -> dict:
++    groups = {}
++
++    for sensor_key, info in result.items():
++        friendly = _friendly_for_driver(_driver_name(info["chip"]))
++        groups.setdefault(friendly, []).append(sensor_key)
++
++    for friendly, keys in groups.items():
++        multiple = len(keys) > 1
++        for index, sensor_key in enumerate(sorted(keys), start=1):
++            result[sensor_key]["name"] = (
++                f"{friendly} {index}" if multiple else friendly
++            )
++
++    return result
++
++
++def _parse_sensors_json(raw: str) -> dict:
++    data = json.loads(raw)
++    result = {}
++
++    for chip, chip_data in data.items():
++        if not isinstance(chip_data, dict):
++            continue
++
++        adapter = chip_data.get("Adapter", "")
++
++        for label, subfeatures in chip_data.items():
++            if label == "Adapter" or not isinstance(subfeatures, dict):
++                continue
++
++            temp = next(
++                (value for key, value in subfeatures.items() if key.endswith("_input")),
++                None,
++            )
++
++            if temp is None:
++                continue
++
++            sensor_key = f"{chip}:{label}"
++            result[sensor_key] = {
++                "chip": chip,
++                "adapter": adapter,
++                "label": label,
++                "temp_c": round(float(temp), 1),
++            }
++
++    return _apply_friendly_names(result)
++
++
++def read_lm_sensors() -> tuple[dict, list[str]]:
++    errors = []
++
++    try:
++        proc = subprocess.run(
++            ["sensors", "-j"],
++            capture_output=True,
++            text=True,
++            timeout=5,
++        )
++    except (subprocess.SubprocessError, OSError) as exc:
++        return {}, [f"Could not run sensors -j: {exc}"]
++
++    if proc.returncode != 0:
++        errors.append(proc.stderr.strip() or f"sensors exited with {proc.returncode}")
++        return {}, errors
++
++    if not proc.stdout.strip():
++        return {}, ["sensors -j returned empty output"]
++
++    try:
++        return _parse_sensors_json(proc.stdout), errors
++    except (json.JSONDecodeError, ValueError) as exc:
++        return {}, [f"Could not parse sensors -j output: {exc}"]
++
++
++def _ctrl_value_re(name: str):
++    return re.compile(rf"{name}\b.*?\bvalue=(-?\d+)"), re.compile(
++        rf"{name}:\s*(-?\d+)"
++    )
++
++
++_SENSOR_TEMP_VALUE_RE, _SENSOR_TEMP_PLAIN_RE = _ctrl_value_re("sensor_temperature")
++_TEMP_CONTROL_VALUE_RE, _TEMP_CONTROL_PLAIN_RE = _ctrl_value_re("temperature_control")
++
++
++def _query_v4l2_ctrl(device: str, ctrl_name: str) -> tuple[bool, str]:
++    try:
++        proc = subprocess.run(
++            ["v4l2-ctl", "-d", device, f"--get-ctrl={ctrl_name}"],
++            capture_output=True,
++            text=True,
++            timeout=5,
++        )
++    except (subprocess.SubprocessError, OSError) as exc:
++        return False, str(exc)
++
++    if proc.returncode != 0:
++        return False, proc.stderr.strip() or f"exited with code {proc.returncode}"
++
++    return True, proc.stdout
++
++
++def read_camera_sensor_temperature(device: str) -> tuple[dict, list[str]]:
++    errors = []
++
++    ok, output_or_error = _query_v4l2_ctrl(device, "sensor_temperature")
++    if not ok:
++        return {}, [f"sensor_temperature query failed on {device}: {output_or_error}"]
++
++    match = (
++        _SENSOR_TEMP_VALUE_RE.search(output_or_error)
++        or _SENSOR_TEMP_PLAIN_RE.search(output_or_error)
++    )
++
++    if not match:
++        return {}, [f"Could not parse sensor_temperature output: {output_or_error.strip()}"]
++
++    try:
++        temp_c = round(int(match.group(1)) / 1000.0, 1)
++    except ValueError as exc:
++        return {}, [f"Could not convert sensor_temperature to int: {exc}"]
++
++    control_active = None
++    ctrl_ok, ctrl_output = _query_v4l2_ctrl(device, "temperature_control")
++
++    if ctrl_ok:
++        ctrl_match = (
++            _TEMP_CONTROL_VALUE_RE.search(ctrl_output)
++            or _TEMP_CONTROL_PLAIN_RE.search(ctrl_output)
++        )
++
++        if ctrl_match:
++            try:
++                control_active = bool(int(ctrl_match.group(1)))
++            except ValueError:
++                control_active = None
++
++    return {
++        "camera:sensor_temperature": {
++            "chip": "camera",
++            "adapter": device,
++            "label": "sensor_temperature",
++            "temp_c": temp_c,
++            "name": "Camera Sensor",
++            "control_active": control_active,
++        }
++    }, errors
++
++
++def read_all_temperatures(device: str) -> dict:
++    sensors, sensor_errors = read_lm_sensors()
++    camera_sensor, camera_errors = read_camera_sensor_temperature(device)
++
++    readings = {}
++    readings.update(sensors)
++    readings.update(camera_sensor)
++
++    timestamp_epoch = time.time()
++
++    return {
++        "timestamp": datetime.fromtimestamp(timestamp_epoch).isoformat(timespec="seconds"),
++        "epoch": timestamp_epoch,
++        "device": device,
++        "sensors": readings,
++        "errors": sensor_errors + camera_errors,
++    }
++
++
++def main():
++    parser = argparse.ArgumentParser()
++    parser.add_argument("--device", default="/dev/video4")
++    args = parser.parse_args()
++
++    print(json.dumps(read_all_temperatures(args.device)))
++
++
++if __name__ == "__main__":
++    main()
+diff --git a/Config/system_config.py b/Config/system_config.py
+index 9e92e67..c9c60ce 100644
+--- a/Config/system_config.py
++++ b/Config/system_config.py
+@@ -72,6 +72,9 @@ FREEZER_TEST_ON_TIME_S = 10 * 60
+ CAMERA_IP = "10.100.10.100"
+ CAMERA_USER = "root"
+ REMOTE_CAPTURE_SCRIPT = "/root/scripts/capture_remote.py"
++REMOTE_CAMERA_TEMPERATURE_SCRIPT = "/root/scripts/read_camera_temperatures.py"
++REMOTE_CAMERA_TEMPERATURE_DEVICE = "/dev/video4"
++CAMERA_INTERNAL_TEMPERATURE_ENABLED = True
+ REMOTE_DATA_ROOT = "/root/scripts/data"
+ 
+ 
+diff --git a/Scripts/analyze_test_folder.py b/Scripts/analyze_test_folder.py
+index 1c1eea3..4901a56 100644
+--- a/Scripts/analyze_test_folder.py
++++ b/Scripts/analyze_test_folder.py
+@@ -705,6 +705,50 @@ def get_temperature(summary: dict) -> dict:
+ 
+ 
+ 
++def _safe_column_name(text: str) -> str:
++    safe = []
++
++    for char in str(text).lower():
++        if char.isalnum():
++            safe.append(char)
++        else:
++            safe.append("_")
++
++    result = "".join(safe)
++
++    while "__" in result:
++        result = result.replace("__", "_")
++
++    return result.strip("_") or "sensor"
++
++
++def add_camera_internal_temperatures_to_result(summary: dict, result: dict):
++    """Flatten camera-internal temperature readings from sweep_summary.json.
++
++    Expected source format is sweep_summary["camera_internal_temperature_readings"],
++    where each record has label/status and a remote_payload with a sensors dict.
++    """
++    readings = summary.get("camera_internal_temperature_readings") or []
++
++    for reading in readings:
++        label = _safe_column_name(reading.get("label", "reading"))
++        result[f"camera_internal_{label}_status"] = reading.get("status")
++
++        payload = reading.get("remote_payload") or {}
++        sensors = payload.get("sensors") or {}
++        errors = payload.get("errors") or reading.get("error")
++
++        if errors:
++            result[f"camera_internal_{label}_errors"] = json.dumps(errors)
++
++        for sensor_key, info in sensors.items():
++            sensor_name = info.get("name") or info.get("label") or sensor_key
++            sensor_column = _safe_column_name(sensor_name)
++
++            if "temp_c" in info:
++                result[f"camera_internal_{label}_{sensor_column}_c"] = info.get("temp_c")
++
++
+ def analyze_sweep(
+     sweep_dir: Path,
+     debug_dir: Path | None = None,
+@@ -727,6 +771,8 @@ def analyze_sweep(
+     for name, value in temps.items():
+         result[f"temp_{name}_c"] = value
+ 
++    add_camera_internal_temperatures_to_result(summary, result)
++
+     for filt in summary.get("filters", []):
+         filter_number = filt["filter_number"]
+         cfg = FILTER_ANALYSIS_CONFIG.get(filter_number)
+@@ -913,7 +959,15 @@ def add_delta_columns(df: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
+ 
+ def make_primary_dataframe(df: pd.DataFrame) -> pd.DataFrame:
+     primary_cols = [col for col in PRIMARY_METRIC_COLUMNS if col in df.columns]
+-    return df[primary_cols]
++
++    camera_internal_cols = [
++        col for col in df.columns
++        if col.startswith("camera_internal_")
++        and col.endswith("_c")
++        and col not in primary_cols
++    ]
++
++    return df[primary_cols + camera_internal_cols]
+ 
+ 
+ # -----------------------------
+diff --git a/Scripts/compare_tests_streamlit.py b/Scripts/compare_tests_streamlit.py
+index fe52c4e..25c01a5 100644
+--- a/Scripts/compare_tests_streamlit.py
++++ b/Scripts/compare_tests_streamlit.py
+@@ -93,7 +93,17 @@ PREFERRED_CUSTOM_METRICS = [
+ 
+ 
+ def label_for_column(column: str) -> str:
+-    return METRIC_LABELS.get(column, column)
++    if column in METRIC_LABELS:
++        return METRIC_LABELS[column]
++
++    if column.startswith("camera_internal_") and column.endswith("_c"):
++        label = column.removeprefix("camera_internal_").removesuffix("_c")
++        label = label.replace("before_capture_", "Before capture: ")
++        label = label.replace("after_capture_", "After capture: ")
++        label = label.replace("_", " ")
++        return f"Camera internal {label} [C]"
++
++    return column
+ 
+ 
+ @st.cache_data(show_spinner=False)
+@@ -166,6 +176,13 @@ def sort_metrics(columns: list[str]) -> list[str]:
+     return preferred + remaining
+ 
+ 
++def camera_internal_temperature_columns(df: pd.DataFrame) -> list[str]:
++    return sorted([
++        col for col in df.columns
++        if col.startswith("camera_internal_") and col.endswith("_c")
++    ])
++
++
+ def make_plot_df(
+     df: pd.DataFrame,
+     x_col: str,
+@@ -629,6 +646,7 @@ def main():
+         "Spectral shift",
+         "Spatial performance",
+         "Signal stability",
++        "Camera internal temperatures",
+         "Custom plot",
+     ])
+ 
+@@ -788,6 +806,38 @@ def main():
+         )
+ 
+     with tabs[5]:
++        st.header("Camera internal temperatures")
++
++        st.markdown(
++            "Internal camera/module temperatures read from the camera computer. "
++            "These values are stored once before image capture and once after image capture for each sweep."
++        )
++
++        internal_temp_cols = camera_internal_temperature_columns(combined)
++
++        if not internal_temp_cols:
++            st.info("No camera-internal temperature columns found. Re-run analysis on tests acquired after the camera temperature integration was added.")
++        else:
++            selected_internal_temp_cols = st.multiselect(
++                "Camera-internal temperature sensors to plot",
++                options=internal_temp_cols,
++                default=internal_temp_cols[: min(6, len(internal_temp_cols))],
++                format_func=label_for_column,
++                key="camera_internal_temperature_columns",
++            )
++
++            plot_metric_group(
++                df=combined,
++                x_col=x_col,
++                show_markers=show_markers,
++                key_prefix="camera_internal_temperatures",
++                metrics=[
++                    (col, label_for_column(col))
++                    for col in selected_internal_temp_cols
++                ],
++            )
++
++    with tabs[6]:
+         st.header("Custom plot")
+ 
+         custom_metric_options = sort_metrics([
+diff --git a/Scripts/deploy_camera_scripts.sh b/Scripts/deploy_camera_scripts.sh
+index badc4ab..6e09d9f 100755
+--- a/Scripts/deploy_camera_scripts.sh
++++ b/Scripts/deploy_camera_scripts.sh
+@@ -7,6 +7,7 @@ CAMERA_USER="root"
+ scp Camera_scripts/capture_remote.py ${CAMERA_USER}@${CAMERA_IP}:/root/scripts/
+ scp Camera_scripts/camera_control.py ${CAMERA_USER}@${CAMERA_IP}:/root/scripts/
+ scp Camera_scripts/camera_config.py ${CAMERA_USER}@${CAMERA_IP}:/root/scripts/
++scp Camera_scripts/read_camera_temperatures.py ${CAMERA_USER}@${CAMERA_IP}:/root/scripts/
+ 
+ ssh ${CAMERA_USER}@${CAMERA_IP} "mkdir -p /root/scripts/data /root/scripts/logs"
+ 
+diff --git a/Scripts/run_single_sweep_remote.py b/Scripts/run_single_sweep_remote.py
+index d301d2c..37d436b 100644
+--- a/Scripts/run_single_sweep_remote.py
++++ b/Scripts/run_single_sweep_remote.py
+@@ -21,6 +21,9 @@ from Config.system_config import (
+     CAMERA_IP,
+     CAMERA_USER,
+     REMOTE_CAPTURE_SCRIPT,
++    REMOTE_CAMERA_TEMPERATURE_SCRIPT,
++    REMOTE_CAMERA_TEMPERATURE_DEVICE,
++    CAMERA_INTERNAL_TEMPERATURE_ENABLED,
+     REMOTE_DATA_ROOT,
+     LOCAL_DATA_ROOT,
+     FILTERWHEEL_HOME_ENABLED,
+@@ -68,6 +71,60 @@ def remote_capture(remote_output_path: str, exposure_time_absolute: int | None =
+     return result.stdout.strip()
+ 
+ 
++def remote_read_camera_temperatures(label: str) -> dict:
++    """Read internal camera temperatures on the camera via SSH.
++
++    This is deliberately non-fatal: if the script is missing or one sensor
++    cannot be read, the sweep should still continue. The returned record is
++    written into sweep_summary.json.
++    """
++    record = {
++        "label": label,
++        "host_timestamp": iso_now(),
++        "enabled": CAMERA_INTERNAL_TEMPERATURE_ENABLED,
++        "status": "disabled",
++    }
++
++    if not CAMERA_INTERNAL_TEMPERATURE_ENABLED:
++        return record
++
++    command = [
++        "python3",
++        REMOTE_CAMERA_TEMPERATURE_SCRIPT,
++        "--device",
++        REMOTE_CAMERA_TEMPERATURE_DEVICE,
++    ]
++
++    try:
++        result = run_ssh(command, timeout=20)
++        output = result.stdout.strip()
++
++        if not output:
++            record.update({
++                "status": "failed",
++                "error": "camera temperature script returned empty stdout",
++            })
++            return record
++
++        # The remote script should print one JSON object. If extra text ever
++        # appears, parse the last non-empty line as a fallback.
++        json_line = output.splitlines()[-1]
++        payload = json.loads(json_line)
++
++        record.update({
++            "status": "success",
++            "remote_payload": payload,
++        })
++
++    except Exception as exc:
++        record.update({
++            "status": "failed",
++            "error": str(exc),
++        })
++
++    return record
++
++
+ def remote_make_dir(remote_dir: str):
+     run_ssh(["mkdir", "-p", remote_dir])
+ 
+@@ -155,6 +212,7 @@ def run_single_sweep(
+         "sweep_started_at": sweep_started_at,
+         "temperature_before_sweep": temperature_before_sweep,
+         "temperature_after_sweep": temperature_after_sweep,
++        "camera_internal_temperature_readings": [],
+     }
+ 
+     filterwheel = FilterwheelController(
+@@ -197,6 +255,11 @@ def run_single_sweep(
+             }
+         else:
+             sweep_summary["homing"] = {"enabled": False}
++
++        print("Reading camera internal temperatures before capture...")
++        sweep_summary["camera_internal_temperature_readings"].append(
++            remote_read_camera_temperatures("before_capture")
++        )
+             
+         lamp_was_turned_on = False
+         
+@@ -249,6 +312,11 @@ def run_single_sweep(
+                 lamp_off_callback()
+                 sweep_summary["lamp"]["off_after_capture"] = True
+ 
++            print("Reading camera internal temperatures after capture...")
++            sweep_summary["camera_internal_temperature_readings"].append(
++                remote_read_camera_temperatures("after_capture")
++            )
++
+         print("Returning filterwheel to zero...")
+         filterwheel.return_to_zero()
+         final_position = filterwheel.get_current_position()
+diff --git a/Scripts/test_camera_internal_temperatures.py b/Scripts/test_camera_internal_temperatures.py
+new file mode 100644
+index 0000000..64c0187
+--- /dev/null
++++ b/Scripts/test_camera_internal_temperatures.py
+@@ -0,0 +1,23 @@
++#!/usr/bin/env python3
++# -*- coding: utf-8 -*-
++
++"""
++Read internal camera temperatures once via SSH.
++
++Run from repo root after deploying Camera_scripts/read_camera_temperatures.py:
++
++    PYTHONPATH=. python3 Scripts/test_camera_internal_temperatures.py
++"""
++
++import json
++
++from Scripts.run_single_sweep_remote import remote_read_camera_temperatures
++
++
++def main():
++    record = remote_read_camera_temperatures("manual_test")
++    print(json.dumps(record, indent=4))
++
++
++if __name__ == "__main__":
++    main()
