@@ -85,6 +85,21 @@ REMOTE_CAMERA_TEMPERATURE_STREAM_COUNT = 300
 REMOTE_CAMERA_TEMPERATURE_STREAM_STARTUP_WAIT_S = 1.0
 
 CAMERA_INTERNAL_TEMPERATURE_ENABLED = True
+
+# Continuous camera keepalive stream during long tests.
+# This keeps the camera/TEC/video pipeline active between sweeps. Normal image
+# capture uses the same V4L2 device, so the long-test logic stops this stream
+# before each sweep capture and restarts it afterward.
+CAMERA_KEEPALIVE_STREAM_ENABLED = False
+CAMERA_KEEPALIVE_STREAM_DEVICE = REMOTE_CAMERA_TEMPERATURE_STREAM_DEVICE
+CAMERA_KEEPALIVE_STREAM_COUNT = 100000000
+CAMERA_KEEPALIVE_STREAM_STARTUP_WAIT_S = 2.0
+CAMERA_KEEPALIVE_STREAM_PID_FILE = "/tmp/freezertest_keepalive_stream.pid"
+CAMERA_KEEPALIVE_STREAM_LOG_FILE = "/tmp/freezertest_keepalive_stream.log"
+CAMERA_KEEPALIVE_KILL_STALE_ON_START = True
+CAMERA_KEEPALIVE_STOP_BEFORE_SWEEP = True
+CAMERA_KEEPALIVE_RESTART_AFTER_SWEEP = True
+
 REMOTE_DATA_ROOT = "/root/scripts/data"
 
 

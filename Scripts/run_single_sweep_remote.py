@@ -28,6 +28,8 @@ from Config.system_config import (
     REMOTE_CAMERA_TEMPERATURE_STREAM_COUNT,
     REMOTE_CAMERA_TEMPERATURE_STREAM_STARTUP_WAIT_S,
     CAMERA_INTERNAL_TEMPERATURE_ENABLED,
+    CAMERA_KEEPALIVE_STOP_BEFORE_SWEEP,
+    CAMERA_KEEPALIVE_RESTART_AFTER_SWEEP,
     REMOTE_DATA_ROOT,
     LOCAL_DATA_ROOT,
     FILTERWHEEL_HOME_ENABLED,
@@ -75,7 +77,7 @@ def remote_capture(remote_output_path: str, exposure_time_absolute: int | None =
     return result.stdout.strip()
 
 
-def remote_read_camera_temperatures(label: str) -> dict:
+def remote_read_camera_temperatures(label: str, stream_refresh: bool | None = None) -> dict:
     """Read internal camera temperatures on the camera via SSH.
 
     This is deliberately non-fatal: if the script is missing or one sensor
@@ -105,7 +107,12 @@ def remote_read_camera_temperatures(label: str) -> dict:
         str(REMOTE_CAMERA_TEMPERATURE_STREAM_STARTUP_WAIT_S),
     ]
 
-    if not REMOTE_CAMERA_TEMPERATURE_STREAM_REFRESH_ENABLED:
+    if stream_refresh is None:
+        stream_refresh = REMOTE_CAMERA_TEMPERATURE_STREAM_REFRESH_ENABLED
+
+    record["stream_refresh_requested"] = bool(stream_refresh)
+
+    if not stream_refresh:
         command.append("--no-stream-refresh")
 
     try:
@@ -201,6 +208,7 @@ def run_single_sweep(
     lamp_on_callback=None,
     lamp_off_callback=None,
     lamp_warmup_s: float = LAMP_WARMUP_S,
+    camera_keepalive_stream=None,
 ):
     run_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     sweep_name = f"sweep_{sweep_index:04d}_{run_timestamp}"
@@ -226,6 +234,7 @@ def run_single_sweep(
         "temperature_before_sweep": temperature_before_sweep,
         "temperature_after_sweep": temperature_after_sweep,
         "camera_internal_temperature_readings": [],
+        "camera_keepalive_stream_events": [],
     }
 
     filterwheel = FilterwheelController(
@@ -269,10 +278,22 @@ def run_single_sweep(
         else:
             sweep_summary["homing"] = {"enabled": False}
 
+        keepalive_active = camera_keepalive_stream is not None
+
         print("Reading camera internal temperatures before capture...")
         sweep_summary["camera_internal_temperature_readings"].append(
-            remote_read_camera_temperatures("before_capture")
+            remote_read_camera_temperatures(
+                "before_capture",
+                stream_refresh=False if keepalive_active else None,
+            )
         )
+
+        if keepalive_active and CAMERA_KEEPALIVE_STOP_BEFORE_SWEEP:
+            print("Stopping camera keepalive stream before image capture...")
+            sweep_summary["camera_keepalive_stream_events"].append(
+                camera_keepalive_stream.stop(reason=f"before_sweep_{sweep_index:04d}_capture")
+            )
+            time.sleep(0.5)
             
         lamp_was_turned_on = False
         
@@ -325,9 +346,18 @@ def run_single_sweep(
                 lamp_off_callback()
                 sweep_summary["lamp"]["off_after_capture"] = True
 
+            if keepalive_active and CAMERA_KEEPALIVE_RESTART_AFTER_SWEEP:
+                print("Restarting camera keepalive stream after image capture...")
+                sweep_summary["camera_keepalive_stream_events"].append(
+                    camera_keepalive_stream.start(reason=f"after_sweep_{sweep_index:04d}_capture")
+                )
+
             print("Reading camera internal temperatures after capture...")
             sweep_summary["camera_internal_temperature_readings"].append(
-                remote_read_camera_temperatures("after_capture")
+                remote_read_camera_temperatures(
+                    "after_capture",
+                    stream_refresh=False if keepalive_active else None,
+                )
             )
 
         print("Returning filterwheel to zero...")

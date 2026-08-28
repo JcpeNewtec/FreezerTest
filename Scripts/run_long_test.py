@@ -9,6 +9,7 @@ from pathlib import Path
 
 from Scripts.run_single_sweep_remote import run_single_sweep
 from Control.temperature_logger import TemperatureLogger
+from Control.camera_keepalive_stream import CameraKeepaliveStream
 
 from Config.system_config import (
     LOCAL_DATA_ROOT,
@@ -24,6 +25,7 @@ from Config.system_config import (
     CAMERA_POWER_CONTROL_ENABLED,
     CAMERA_POWER_BOOT_WAIT_S,
     CAMERA_POWER_OFF_AT_TEST_END,
+    CAMERA_KEEPALIVE_STREAM_ENABLED,
     CAMERA_ID,
     TEST_OPERATOR,
     TEST_NOTES,
@@ -295,6 +297,7 @@ def run_one_test(repeat_index: int, repeat_count: int) -> dict:
         log_path=temperature_log_path,
         interval_s=1.0,
     )
+    camera_keepalive_stream = None
 
     storage_info = check_storage(test_root_dir)
 
@@ -311,6 +314,7 @@ def run_one_test(repeat_index: int, repeat_count: int) -> dict:
         "precool_enabled": PRECOOL_BEFORE_TEST_ENABLED,
         "precool_sensor": PRECOOL_SENSOR_NAME,
         "precool_target_c": PRECOOL_TARGET_C,
+        "camera_keepalive_stream_enabled": CAMERA_KEEPALIVE_STREAM_ENABLED,
     }
     write_json(metadata_path, test_metadata)
 
@@ -332,6 +336,8 @@ def run_one_test(repeat_index: int, repeat_count: int) -> dict:
         "precool_enabled": PRECOOL_BEFORE_TEST_ENABLED,
         "precool_sensor": PRECOOL_SENSOR_NAME,
         "precool_target_c": PRECOOL_TARGET_C,
+        "camera_keepalive_stream_enabled": CAMERA_KEEPALIVE_STREAM_ENABLED,
+        "camera_keepalive_stream_events": [],
     }
     write_json(summary_path, test_summary)
 
@@ -377,6 +383,21 @@ def run_one_test(repeat_index: int, repeat_count: int) -> dict:
                 "boot/stabilization..."
             )
             time.sleep(CAMERA_POWER_BOOT_WAIT_S)
+
+        if CAMERA_KEEPALIVE_STREAM_ENABLED:
+            print("Starting camera keepalive stream for measurement phase...")
+            camera_keepalive_stream = CameraKeepaliveStream()
+            keepalive_start_event = camera_keepalive_stream.start(
+                reason=f"repeat_{repeat_index:03d}_measurement_start"
+            )
+            test_summary["camera_keepalive_stream_events"].append(keepalive_start_event)
+            write_json(summary_path, test_summary)
+
+            if not keepalive_start_event.get("running", False):
+                raise RuntimeError(
+                    "Camera keepalive stream did not start. "
+                    f"Event: {keepalive_start_event}"
+                )
 
         measurement_start = datetime.now()
         test_end = measurement_start + timedelta(hours=TEST_DURATION_HOURS)
@@ -461,6 +482,7 @@ def run_one_test(repeat_index: int, repeat_count: int) -> dict:
                     lamp_on_callback=temp_logger.lamp_on,
                     lamp_off_callback=temp_logger.lamp_off,
                     lamp_warmup_s=LAMP_WARMUP_S,
+                    camera_keepalive_stream=camera_keepalive_stream,
                 )
 
                 temperature_after_sweep = temp_logger.get_latest_record()
@@ -526,6 +548,17 @@ def run_one_test(repeat_index: int, repeat_count: int) -> dict:
             raise
 
     finally:
+        if camera_keepalive_stream is not None:
+            try:
+                print("Stopping camera keepalive stream...")
+                keepalive_stop_event = camera_keepalive_stream.stop(
+                    reason=f"repeat_{repeat_index:03d}_test_end"
+                )
+                test_summary["camera_keepalive_stream_events"].append(keepalive_stop_event)
+            except Exception as e:
+                print(f"Failed to stop camera keepalive stream: {e}")
+                test_summary["camera_keepalive_stream_stop_error"] = str(e)
+
         # Always remove cooling first.
         try:
             print("Ensuring freezer is OFF...")
