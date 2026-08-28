@@ -74,6 +74,16 @@ CAMERA_USER = "root"
 REMOTE_CAPTURE_SCRIPT = "/root/scripts/capture_remote.py"
 REMOTE_CAMERA_TEMPERATURE_SCRIPT = "/root/scripts/read_camera_temperatures.py"
 REMOTE_CAMERA_TEMPERATURE_DEVICE = "/dev/video4"
+
+# Some Qtec camera firmware/driver versions only update the V4L2
+# sensor_temperature control while the camera is actively streaming.
+# The camera-side temperature script therefore starts a temporary stream,
+# keeps that stream active while sensor_temperature is read, then stops it.
+REMOTE_CAMERA_TEMPERATURE_STREAM_REFRESH_ENABLED = True
+REMOTE_CAMERA_TEMPERATURE_STREAM_DEVICE = REMOTE_CAMERA_TEMPERATURE_DEVICE
+REMOTE_CAMERA_TEMPERATURE_STREAM_COUNT = 300
+REMOTE_CAMERA_TEMPERATURE_STREAM_STARTUP_WAIT_S = 1.0
+
 CAMERA_INTERNAL_TEMPERATURE_ENABLED = True
 REMOTE_DATA_ROOT = "/root/scripts/data"
 

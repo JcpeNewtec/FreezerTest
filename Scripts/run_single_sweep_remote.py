@@ -23,6 +23,10 @@ from Config.system_config import (
     REMOTE_CAPTURE_SCRIPT,
     REMOTE_CAMERA_TEMPERATURE_SCRIPT,
     REMOTE_CAMERA_TEMPERATURE_DEVICE,
+    REMOTE_CAMERA_TEMPERATURE_STREAM_REFRESH_ENABLED,
+    REMOTE_CAMERA_TEMPERATURE_STREAM_DEVICE,
+    REMOTE_CAMERA_TEMPERATURE_STREAM_COUNT,
+    REMOTE_CAMERA_TEMPERATURE_STREAM_STARTUP_WAIT_S,
     CAMERA_INTERNAL_TEMPERATURE_ENABLED,
     REMOTE_DATA_ROOT,
     LOCAL_DATA_ROOT,
@@ -93,7 +97,16 @@ def remote_read_camera_temperatures(label: str) -> dict:
         REMOTE_CAMERA_TEMPERATURE_SCRIPT,
         "--device",
         REMOTE_CAMERA_TEMPERATURE_DEVICE,
+        "--stream-device",
+        REMOTE_CAMERA_TEMPERATURE_STREAM_DEVICE,
+        "--stream-count",
+        str(REMOTE_CAMERA_TEMPERATURE_STREAM_COUNT),
+        "--stream-startup-wait-s",
+        str(REMOTE_CAMERA_TEMPERATURE_STREAM_STARTUP_WAIT_S),
     ]
+
+    if not REMOTE_CAMERA_TEMPERATURE_STREAM_REFRESH_ENABLED:
+        command.append("--no-stream-refresh")
 
     try:
         result = run_ssh(command, timeout=20)

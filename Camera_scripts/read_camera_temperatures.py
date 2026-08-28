@@ -149,10 +149,140 @@ def _query_v4l2_ctrl(device: str, ctrl_name: str) -> tuple[bool, str]:
     return True, proc.stdout
 
 
-def read_camera_sensor_temperature(device: str) -> tuple[dict, list[str]]:
-    errors = []
+def start_camera_temperature_stream(
+    stream_device: str,
+    frame_count: int = 300,
+    startup_wait_s: float = 1.0,
+) -> tuple[subprocess.Popen | None, dict]:
+    """Start a temporary stream and leave it running while temperature is read.
 
-    ok, output_or_error = _query_v4l2_ctrl(device, "sensor_temperature")
+    On this camera, the V4L2 sensor_temperature control is updated only while
+    the video pipeline is actively streaming. A short pre-read stream is not
+    enough if it stops before the get-ctrl call. Therefore this function starts
+    v4l2-ctl as a background process, waits briefly for streaming to begin, and
+    the caller reads sensor_temperature while the process is still alive.
+    """
+    command = [
+        "v4l2-ctl",
+        "-d",
+        stream_device,
+        "--stream-mmap",
+        f"--stream-count={int(frame_count)}",
+        "--stream-to=/dev/null",
+    ]
+
+    metadata = {
+        "enabled": True,
+        "mode": "active_during_read",
+        "stream_device": stream_device,
+        "frame_count": int(frame_count),
+        "startup_wait_s": float(startup_wait_s),
+        "command": command,
+    }
+
+    try:
+        process = subprocess.Popen(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+    except (subprocess.SubprocessError, OSError) as exc:
+        metadata.update({
+            "ok": False,
+            "error": str(exc),
+        })
+        return None, metadata
+
+    time.sleep(max(0.0, float(startup_wait_s)))
+
+    returncode = process.poll()
+    if returncode is not None:
+        stdout, stderr = process.communicate(timeout=1)
+        metadata.update({
+            "ok": False,
+            "returncode": returncode,
+            "stdout": stdout.strip(),
+            "stderr": stderr.strip(),
+            "error": "stream process ended before sensor_temperature read",
+        })
+        return None, metadata
+
+    metadata.update({
+        "ok": True,
+        "running_during_read": True,
+    })
+    return process, metadata
+
+
+def stop_camera_temperature_stream(
+    process: subprocess.Popen | None,
+    metadata: dict,
+    stop_timeout_s: float = 3.0,
+) -> dict:
+    """Stop the temporary stream and append shutdown details to metadata."""
+    if process is None:
+        metadata.setdefault("stopped", False)
+        return metadata
+
+    if process.poll() is None:
+        process.terminate()
+        try:
+            stdout, stderr = process.communicate(timeout=float(stop_timeout_s))
+        except subprocess.TimeoutExpired:
+            process.kill()
+            stdout, stderr = process.communicate(timeout=1)
+            metadata["forced_kill"] = True
+    else:
+        stdout, stderr = process.communicate(timeout=1)
+
+    metadata.update({
+        "stopped": True,
+        "returncode_after_stop": process.returncode,
+        "stdout": (stdout or "").strip(),
+        "stderr": (stderr or "").strip(),
+    })
+    return metadata
+
+
+def read_camera_sensor_temperature(
+    device: str,
+    stream_refresh: bool = True,
+    stream_device: str | None = None,
+    stream_count: int = 300,
+    stream_startup_wait_s: float = 1.0,
+) -> tuple[dict, list[str]]:
+    errors = []
+    stream_device = stream_device or device
+    stream_process = None
+
+    if stream_refresh:
+        stream_process, refresh_result = start_camera_temperature_stream(
+            stream_device=stream_device,
+            frame_count=stream_count,
+            startup_wait_s=stream_startup_wait_s,
+        )
+        if not refresh_result.get("ok", False):
+            errors.append(
+                "camera stream was not active before sensor_temperature read: "
+                + (refresh_result.get("error") or refresh_result.get("stderr") or "unknown error")
+            )
+    else:
+        refresh_result = {
+            "enabled": False,
+            "ok": None,
+            "stream_device": stream_device,
+        }
+
+    try:
+        ok, output_or_error = _query_v4l2_ctrl(device, "sensor_temperature")
+    finally:
+        if stream_refresh:
+            refresh_result = stop_camera_temperature_stream(
+                stream_process,
+                refresh_result,
+            )
+
     if not ok:
         return {}, [f"sensor_temperature query failed on {device}: {output_or_error}"]
 
@@ -184,21 +314,39 @@ def read_camera_sensor_temperature(device: str) -> tuple[dict, list[str]]:
             except ValueError:
                 control_active = None
 
+    sensor_info = {
+        "chip": "camera",
+        "adapter": device,
+        "label": "sensor_temperature",
+        "temp_c": temp_c,
+        "name": "Camera Sensor",
+        "control_active": control_active,
+        "stream_refresh": refresh_result,
+    }
+
+    if temp_c == 20.0:
+        sensor_info["warning"] = "exactly_20c_possible_default_or_stale_value"
+
     return {
-        "camera:sensor_temperature": {
-            "chip": "camera",
-            "adapter": device,
-            "label": "sensor_temperature",
-            "temp_c": temp_c,
-            "name": "Camera Sensor",
-            "control_active": control_active,
-        }
+        "camera:sensor_temperature": sensor_info
     }, errors
 
 
-def read_all_temperatures(device: str) -> dict:
+def read_all_temperatures(
+    device: str,
+    stream_refresh: bool = True,
+    stream_device: str | None = None,
+    stream_count: int = 5,
+    stream_startup_wait_s: float = 1.0,
+) -> dict:
     sensors, sensor_errors = read_lm_sensors()
-    camera_sensor, camera_errors = read_camera_sensor_temperature(device)
+    camera_sensor, camera_errors = read_camera_sensor_temperature(
+        device=device,
+        stream_refresh=stream_refresh,
+        stream_device=stream_device,
+        stream_count=stream_count,
+        stream_startup_wait_s=stream_startup_wait_s,
+    )
 
     readings = {}
     readings.update(sensors)
@@ -218,9 +366,40 @@ def read_all_temperatures(device: str) -> dict:
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--device", default="/dev/video4")
+    parser.add_argument(
+        "--stream-device",
+        default=None,
+        help="Device node to briefly stream before reading sensor_temperature. "
+             "Defaults to --device.",
+    )
+    parser.add_argument(
+        "--stream-count",
+        type=int,
+        default=300,
+        help="Number of frames to stream to /dev/null while reading sensor_temperature.",
+    )
+    parser.add_argument(
+        "--stream-startup-wait-s",
+        type=float,
+        default=1.0,
+        help="Seconds to wait after starting the temporary stream before reading sensor_temperature.",
+    )
+    parser.add_argument(
+        "--no-stream-refresh",
+        action="store_true",
+        help="Disable the pre-read stream refresh.",
+    )
     args = parser.parse_args()
 
-    print(json.dumps(read_all_temperatures(args.device)))
+    print(json.dumps(
+        read_all_temperatures(
+            device=args.device,
+            stream_refresh=not args.no_stream_refresh,
+            stream_device=args.stream_device,
+            stream_count=args.stream_count,
+            stream_startup_wait_s=args.stream_startup_wait_s,
+        )
+    ))
 
 
 if __name__ == "__main__":
