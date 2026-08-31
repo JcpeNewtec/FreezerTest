@@ -23,6 +23,7 @@ from pathlib import Path
 import json
 from datetime import date
 
+import re
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
@@ -33,7 +34,7 @@ DEFAULT_RESULTS_ROOT = "/home/jcpe/Documents/Projects /FreezerTestSetup/Test_Res
 
 METRIC_LABELS = {
     "sweep_index": "Sweep index",
-
+    "repeat_index": "Repeat cycle index",
     "temp_probe_1_c": "Probe 1 temperature [C]",
     "temp_probe_2_c": "Probe 2 temperature [C]",
     "temp_probe_3_c": "Probe 3 temperature [C]",
@@ -51,6 +52,10 @@ METRIC_LABELS = {
     "bp_780_peak_fit_y_px_mean_delta": "780 nm spectral line shift [px]",
     "bp_1064_peak_fit_y_px_mean_delta": "1064 nm spectral line shift [px]",
     "bp_1550_peak_fit_y_px_mean_delta": "1550 nm spectral line shift [px]",
+    "bp_780_peak_fit_y_px_mean_repeat_delta_px": "780 nm return error [px]",
+    "bp_1064_peak_fit_y_px_mean_repeat_delta_px": "1064 nm return error [px]",
+    "bp_1550_peak_fit_y_px_mean_repeat_delta_px": "1550 nm return error [px]",
+    "no_filter_edge_gaussian_x_px_mean_repeat_delta_px": "Spatial edge return error [px]",
 
     "no_filter_lsf_gaussian_fwhm_px_mean": "Spatial FWHM [px]",
     "no_filter_edge_gaussian_x_px_mean_delta": "Spatial edge shift [px]",
@@ -121,9 +126,15 @@ def find_metric_files(results_root: str) -> list[str]:
 def load_metrics(metric_file: str) -> pd.DataFrame:
     path = Path(metric_file)
     df = pd.read_csv(path)
+    df = merge_diagnostics_columns(metric_file, df)
 
     test_dir = path.parent.parent
     metadata = load_test_metadata(test_dir)
+    repeat_index = metadata.get("repeat_index")
+    if repeat_index is None:
+        repeat_index = infer_repeat_index_from_name(test_dir.name)
+    
+    repeat_group_id = infer_repeat_group_id(test_dir.name, metadata)
 
     camera_id = metadata.get("camera_id") or test_dir.name
     test_date = metadata.get("test_date") or ""
@@ -137,6 +148,9 @@ def load_metrics(metric_file: str) -> pd.DataFrame:
     df["camera_id"] = camera_id
     df["test_date"] = test_date
     df["test_duration_hours"] = test_duration_hours
+    df["repeat_index"] = int(repeat_index)
+    df["repeat_count"] = metadata.get("repeat_count")
+    df["repeat_group_id"] = repeat_group_id
     df["operator"] = operator
     df["notes"] = notes
 
@@ -370,6 +384,13 @@ def default_metadata(test_dir: Path) -> dict:
         "notes": "",
     }
 
+
+def safe_name(value: str) -> str:
+    text = str(value or "").strip()
+    text = re.sub(r"[^A-Za-z0-9_.-]+", "_", text)
+    text = text.strip("_")
+    return text or "unknown_camera"
+
 def load_test_metadata(test_dir: Path) -> dict:
     metadata_path = test_dir / "test_metadata.json"
     summary_path = test_dir / "test_summary.json"
@@ -402,6 +423,141 @@ def load_test_metadata(test_dir: Path) -> dict:
             metadata["summary_error"] = str(e)
 
     return metadata
+
+def infer_repeat_index_from_name(test_name: str) -> int:
+    import re
+
+    match = re.search(r"_repeat_(\d+)_", test_name)
+
+    if match:
+        return int(match.group(1))
+
+    return 1
+
+
+def infer_repeat_group_id(test_name: str, metadata: dict) -> str:
+    """
+    Return repeat group ID as:
+
+        CAMERA_ID_YYYY-MM-DD
+
+    Preferred source:
+        metadata["repeat_group_start_date"]
+
+    Fallbacks:
+        - existing repeat_group_id containing a date
+        - folder timestamp
+        - test_date
+    """
+
+    camera_id = safe_name(metadata.get("camera_id") or "unknown_camera")
+
+    # Best source: explicitly repaired/written metadata.
+    repeat_group_start_date = metadata.get("repeat_group_start_date")
+    if repeat_group_start_date:
+        return f"{camera_id}_{str(repeat_group_start_date)[:10]}"
+
+    # If old metadata already has a repeat_group_id, extract the date from it.
+    existing_group_id = metadata.get("repeat_group_id")
+    if existing_group_id:
+        existing_group_id = str(existing_group_id)
+
+        # Handles EV-0-0-002-TEC_2026-08-13
+        match = re.search(r"(\d{4}-\d{2}-\d{2})", existing_group_id)
+        if match:
+            return f"{camera_id}_{match.group(1)}"
+
+        # Handles freezer_test_20260813_085456
+        match = re.search(r"(\d{8})(?:_\d{6})?", existing_group_id)
+        if match:
+            date_text = match.group(1)
+            date_iso = f"{date_text[0:4]}-{date_text[4:6]}-{date_text[6:8]}"
+            return f"{camera_id}_{date_iso}"
+
+    # Folder-name fallback:
+    # EV-0-0-002-TEC_repeat_001_20260813_085456
+    # freezer_test_repeat_002_20260814_010000
+    match = re.search(r"_(?:repeat_\d+_)?(\d{8})_\d{6}$", test_name)
+    if match:
+        date_text = match.group(1)
+        date_iso = f"{date_text[0:4]}-{date_text[4:6]}-{date_text[6:8]}"
+        return f"{camera_id}_{date_iso}"
+
+    # Last fallback. This may split a multi-day repeat sequence,
+    # so repaired metadata is preferred.
+    test_date = metadata.get("test_date")
+    if test_date:
+        return f"{camera_id}_{str(test_date)[:10]}"
+
+    return f"{camera_id}_unknown_date"
+
+def merge_diagnostics_columns(metric_file: str, metrics_df: pd.DataFrame) -> pd.DataFrame:
+    diagnostics_path = Path(metric_file).parent / "sweep_diagnostics.csv"
+
+    if not diagnostics_path.exists():
+        return metrics_df
+
+    diagnostics_df = pd.read_csv(diagnostics_path)
+
+    desired_cols = [
+        "sweep_name",
+        "sweep_index",
+        "bp_780_peak_fit_y_px_mean",
+        "bp_1064_peak_fit_y_px_mean",
+        "bp_1550_peak_fit_y_px_mean",
+        "no_filter_edge_gaussian_x_px_mean",
+    ]
+
+    available_cols = [c for c in desired_cols if c in diagnostics_df.columns]
+
+    if "sweep_name" in metrics_df.columns and "sweep_name" in available_cols:
+        merge_key = "sweep_name"
+    else:
+        merge_key = "sweep_index"
+
+    available_cols = [c for c in available_cols if c == merge_key or c not in metrics_df.columns]
+
+    if len(available_cols) <= 1:
+        return metrics_df
+
+    return metrics_df.merge(
+        diagnostics_df[available_cols],
+        on=merge_key,
+        how="left",
+    )
+
+REPEAT_POSITION_COLUMNS = [
+    "bp_780_peak_fit_y_px_mean",
+    "bp_1064_peak_fit_y_px_mean",
+    "bp_1550_peak_fit_y_px_mean",
+    "no_filter_edge_gaussian_x_px_mean",
+]
+
+def add_repeatability_columns(df: pd.DataFrame) -> pd.DataFrame:
+    df = df.copy()
+
+    if "repeat_group_id" not in df.columns or "sweep_index" not in df.columns:
+        return df
+
+    for col in REPEAT_POSITION_COLUMNS:
+        if col not in df.columns:
+            continue
+
+        delta_col = f"{col}_repeat_delta_px"
+        df[delta_col] = pd.NA
+
+        for _, group_df in df.groupby(["repeat_group_id", "sweep_index"], dropna=False):
+            valid = group_df.dropna(subset=[col])
+
+            if valid.empty:
+                continue
+
+            baseline_row = valid.sort_values(["repeat_index", "test_folder"]).iloc[0]
+            baseline = baseline_row[col]
+
+            df.loc[group_df.index, delta_col] = group_df[col] - baseline
+
+    return df
 
 def save_test_metadata(test_dir: Path, metadata: dict):
     metadata_path = test_dir / "test_metadata.json"
@@ -537,6 +693,8 @@ def main():
                 "camera_id": metadata.get("camera_id", test_name),
                 "test_date": metadata.get("test_date", ""),
                 "test_duration_hours": metadata.get("test_duration_hours", None),
+                "repeat_index": metadata.get("repeat_index", infer_repeat_index_from_name(test_name)),
+                "repeat_group_id": infer_repeat_group_id(test_name, metadata),
                 "operator": metadata.get("operator", ""),
                 "notes": metadata.get("notes", ""),
             })
@@ -589,15 +747,41 @@ def main():
             st.warning("No tests match the current filters.")
             st.stop()
         
-        selected_test_names = st.multiselect(
-            "Select tests to compare",
-            options=list(filtered_test_options.keys()),
-            default=list(filtered_test_options.keys())[: min(3, len(filtered_test_options))],
+        selection_mode = st.radio(
+            "Selection mode",
+            options=["Individual tests", "Repeat groups"],
+            index=0,
         )
         
-        if not selected_test_names:
-            st.warning("Select at least one test.")
-            st.stop()
+        if selection_mode == "Repeat groups":
+            repeat_group_options = sorted(filtered_metadata_df["repeat_group_id"].dropna().unique())
+        
+            selected_repeat_groups = st.multiselect(
+                "Select repeat groups",
+                options=repeat_group_options,
+                default=repeat_group_options[: min(2, len(repeat_group_options))],
+            )
+        
+            filtered_metadata_df = filtered_metadata_df[
+                filtered_metadata_df["repeat_group_id"].isin(selected_repeat_groups)
+            ]
+        
+            selected_test_names = filtered_metadata_df["test"].tolist()
+        
+            if not selected_test_names:
+                st.warning("Select at least one repeat group.")
+                st.stop()
+        
+        else:
+            selected_test_names = st.multiselect(
+                "Select tests to compare",
+                options=list(filtered_test_options.keys()),
+                default=list(filtered_test_options.keys())[: min(3, len(filtered_test_options))],
+            )
+        
+            if not selected_test_names:
+                st.warning("Select at least one test.")
+                st.stop()
         
         test_options = filtered_test_options
 
@@ -607,6 +791,7 @@ def main():
         dfs.append(load_metrics(test_options[test_name]))
 
     combined = pd.concat(dfs, ignore_index=True)
+    combined = add_repeatability_columns(combined)
     csv_data = combined.to_csv(index=False).encode("utf-8")
 
     with st.sidebar:
@@ -647,6 +832,7 @@ def main():
         "Spatial performance",
         "Signal stability",
         "Camera internal temperatures",
+        "Cycle repeatability",
         "Custom plot",
     ])
 
@@ -838,6 +1024,83 @@ def main():
             )
 
     with tabs[6]:
+        st.header("Cycle repeatability")
+    
+        st.markdown(
+            "This checks whether the spectral lines and spatial edge return to the "
+            "same absolute sensor position at the same sweep index in repeated cycles. "
+            "The plotted value is relative to the first repeat cycle in each repeat group."
+        )
+    
+        if "repeat_index" not in combined.columns:
+            st.info("No repeat_index column found.")
+        else:
+            available_sweeps = sorted([
+                int(v) for v in combined["sweep_index"].dropna().unique()
+            ])
+    
+            if not available_sweeps:
+                st.info("No sweep indices available.")
+            else:
+                selected_repeatability_sweep = st.selectbox(
+                    "Sweep index to compare across cycles",
+                    options=available_sweeps,
+                    index=0,
+                    key="repeatability_sweep_index",
+                )
+    
+                repeatability_df = combined[
+                    combined["sweep_index"] == selected_repeatability_sweep
+                ].copy()
+    
+                repeatability_metrics = [
+                    (
+                        "bp_780_peak_fit_y_px_mean_repeat_delta_px",
+                        "780 nm line return error",
+                    ),
+                    (
+                        "bp_1064_peak_fit_y_px_mean_repeat_delta_px",
+                        "1064 nm line return error",
+                    ),
+                    (
+                        "bp_1550_peak_fit_y_px_mean_repeat_delta_px",
+                        "1550 nm line return error",
+                    ),
+                    (
+                        "no_filter_edge_gaussian_x_px_mean_repeat_delta_px",
+                        "Spatial edge return error",
+                    ),
+                ]
+    
+                plot_metric_group(
+                    df=repeatability_df,
+                    x_col="repeat_index",
+                    show_markers=True,
+                    key_prefix="cycle_repeatability",
+                    metrics=repeatability_metrics,
+                )
+    
+                with st.expander("Show repeatability data"):
+                    cols = [
+                        "repeat_group_id",
+                        "repeat_index",
+                        "test_folder",
+                        "sweep_index",
+                        "bp_780_peak_fit_y_px_mean_repeat_delta_px",
+                        "bp_1064_peak_fit_y_px_mean_repeat_delta_px",
+                        "bp_1550_peak_fit_y_px_mean_repeat_delta_px",
+                        "no_filter_edge_gaussian_x_px_mean_repeat_delta_px",
+                    ]
+    
+                    cols = [c for c in cols if c in repeatability_df.columns]
+                    st.dataframe(
+                        repeatability_df[cols].sort_values(
+                            ["repeat_group_id", "repeat_index", "test_folder"]
+                        ),
+                        width="stretch",
+                    )
+
+    with tabs[7]:
         st.header("Custom plot")
 
         custom_metric_options = sort_metrics([

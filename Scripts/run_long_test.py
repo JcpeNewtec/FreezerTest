@@ -6,6 +6,7 @@ import shutil
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
+import re
 
 from Scripts.run_single_sweep_remote import run_single_sweep
 from Control.temperature_logger import TemperatureLogger
@@ -47,6 +48,16 @@ from Config.system_config import (
 
 def iso_now() -> str:
     return datetime.now().isoformat(timespec="seconds")
+
+def safe_name(value: str) -> str:
+    text = str(value).strip()
+    text = re.sub(r"[^A-Za-z0-9_.-]+", "_", text)
+    text = text.strip("_")
+    return text or "unknown_camera"
+
+
+def repeat_group_id_for_start(start_time: datetime) -> str:
+    return f"{safe_name(CAMERA_ID)}_{start_time.date().isoformat()}"
 
 
 def check_storage(path: Path, minimum_free_gb: float = MINIMUM_FREE_GB):
@@ -274,16 +285,22 @@ def precool_freezer(
 
 def create_test_folder(repeat_index: int, repeat_count: int) -> Path:
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    folder_prefix = safe_name(CAMERA_ID)
 
     if repeat_count > 1:
-        folder_name = f"{TEST_NAME}_repeat_{repeat_index:03d}_{timestamp}"
+        folder_name = f"{folder_prefix}_repeat_{repeat_index:03d}_{timestamp}"
     else:
-        folder_name = f"{TEST_NAME}_{timestamp}"
+        folder_name = f"{folder_prefix}_{timestamp}"
 
     return Path(LOCAL_DATA_ROOT) / folder_name
 
 
-def run_one_test(repeat_index: int, repeat_count: int) -> dict:
+def run_one_test(
+    repeat_index: int,
+    repeat_count: int,
+    repeat_group_id: str,
+) -> dict:
+    
     folder_created_at = datetime.now()
     test_root_dir = create_test_folder(repeat_index, repeat_count)
     test_root_dir.mkdir(parents=True, exist_ok=True)
@@ -311,6 +328,8 @@ def run_one_test(repeat_index: int, repeat_count: int) -> dict:
         "notes": TEST_NOTES,
         "repeat_index": repeat_index,
         "repeat_count": repeat_count,
+        "repeat_group_id": repeat_group_id,
+        "repeat_group_start_date": repeat_group_id.split("_")[-1],
         "precool_enabled": PRECOOL_BEFORE_TEST_ENABLED,
         "precool_sensor": PRECOOL_SENSOR_NAME,
         "precool_target_c": PRECOOL_TARGET_C,
@@ -319,7 +338,7 @@ def run_one_test(repeat_index: int, repeat_count: int) -> dict:
     write_json(metadata_path, test_metadata)
 
     test_summary = {
-        "test_name": TEST_NAME,
+        "test_name": safe_name(CAMERA_ID),
         "test_root_dir": str(test_root_dir),
         "folder_created_at": folder_created_at.isoformat(timespec="seconds"),
         "test_duration_hours": TEST_DURATION_HOURS,
@@ -333,6 +352,8 @@ def run_one_test(repeat_index: int, repeat_count: int) -> dict:
         "metadata_path": str(metadata_path),
         "repeat_index": repeat_index,
         "repeat_count": repeat_count,
+        "repeat_group_id": repeat_group_id,
+        "repeat_group_start_date": repeat_group_id.split("_")[-1],
         "precool_enabled": PRECOOL_BEFORE_TEST_ENABLED,
         "precool_sensor": PRECOOL_SENSOR_NAME,
         "precool_target_c": PRECOOL_TARGET_C,
@@ -615,6 +636,9 @@ def wait_between_repeats(seconds: float):
 
 def main():
     repeat_count = max(1, int(REPEAT_TEST_COUNT))
+    sequence_start_time = datetime.now()
+    repeat_group_id = repeat_group_id_for_start(sequence_start_time)
+    print(f"Repeat group ID: {repeat_group_id}")
 
     print(f"Configured repeat count: {repeat_count}")
 
@@ -627,6 +651,7 @@ def main():
             run_one_test(
                 repeat_index=repeat_index,
                 repeat_count=repeat_count,
+                repeat_group_id=repeat_group_id,
             )
         except Exception as e:
             print(f"Repeat {repeat_index} failed: {e}")
