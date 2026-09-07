@@ -105,6 +105,27 @@ REMOTE_DATA_ROOT = "/root/scripts/data"
 
 TEST_NAME = "freezer_test"
 TEST_DURATION_HOURS = 1.0
+
+# Measurement end condition.
+#
+# "time": preserve the existing behavior and end after TEST_DURATION_HOURS.
+# "temperature": end when TEST_END_SENSOR_NAME reaches TEST_END_TARGET_C.
+#                TEST_END_SAFETY_TIMEOUT_HOURS remains a hard maximum runtime
+#                so a missing/broken probe cannot leave a test running forever.
+TEST_END_MODE = "time"
+TEST_END_SENSOR_NAME = "probe_2"
+TEST_END_TARGET_C = 40.0
+# "above" means end when temperature >= target.
+# "below" means end when temperature <= target.
+TEST_END_DIRECTION = "above"
+TEST_END_SAFETY_TIMEOUT_HOURS = 14.0
+# Require several new logger records at/through the target before ending.
+# This prevents one bad temperature sample from ending an unattended test.
+TEST_END_REQUIRED_CONSECUTIVE_READS = 3
+# When a temperature target or safety timeout is reached between normal sweeps,
+# take one immediate final sweep so the analysis contains an endpoint image set.
+TEST_END_FINAL_SWEEP_ENABLED = True
+
 SWEEP_INTERVAL_SECONDS = 180
 MAX_SWEEPS = 25
 RETRY_DELAY_SECONDS = 30

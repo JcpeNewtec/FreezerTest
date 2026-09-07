@@ -16,6 +16,13 @@ from Config.system_config import (
     LOCAL_DATA_ROOT,
     TEST_NAME,
     TEST_DURATION_HOURS,
+    TEST_END_MODE,
+    TEST_END_SENSOR_NAME,
+    TEST_END_TARGET_C,
+    TEST_END_DIRECTION,
+    TEST_END_SAFETY_TIMEOUT_HOURS,
+    TEST_END_REQUIRED_CONSECUTIVE_READS,
+    TEST_END_FINAL_SWEEP_ENABLED,
     SWEEP_INTERVAL_SECONDS,
     MAX_SWEEPS,
     RETRY_DELAY_SECONDS,
@@ -118,6 +125,49 @@ def get_temperature_from_record(record: dict | None, sensor_name: str):
         return float(temperatures[sensor_name])
     except (TypeError, ValueError):
         return None
+
+
+def normalized_test_end_mode() -> str:
+    mode = str(TEST_END_MODE).strip().lower()
+    if mode not in {"time", "temperature"}:
+        raise ValueError(
+            f"Invalid TEST_END_MODE={TEST_END_MODE!r}. "
+            "Use 'time' or 'temperature'."
+        )
+    return mode
+
+
+def normalized_test_end_direction() -> str:
+    direction = str(TEST_END_DIRECTION).strip().lower()
+    if direction not in {"above", "below"}:
+        raise ValueError(
+            f"Invalid TEST_END_DIRECTION={TEST_END_DIRECTION!r}. "
+            "Use 'above' or 'below'."
+        )
+    return direction
+
+
+def temperature_end_condition_met(value_c: float) -> bool:
+    direction = normalized_test_end_direction()
+    target_c = float(TEST_END_TARGET_C)
+
+    if direction == "above":
+        return value_c >= target_c
+
+    return value_c <= target_c
+
+
+def temperature_record_identity(record: dict | None):
+    """Return a stable identity so the same logger record is not counted twice."""
+    if not record:
+        return None
+
+    timestamp = record.get("timestamp")
+    if timestamp is not None:
+        return str(timestamp)
+
+    # Fallback for older logger records without a timestamp.
+    return id(record)
 
 
 def wait_for_first_temperature_record(
@@ -324,6 +374,13 @@ def run_one_test(
         "test_date": folder_created_at.date().isoformat(),
         "folder_created_at": folder_created_at.isoformat(timespec="seconds"),
         "test_duration_hours": TEST_DURATION_HOURS,
+        "test_end_mode": str(TEST_END_MODE).strip().lower(),
+        "test_end_sensor": TEST_END_SENSOR_NAME,
+        "test_end_target_c": TEST_END_TARGET_C,
+        "test_end_direction": TEST_END_DIRECTION,
+        "test_end_safety_timeout_hours": TEST_END_SAFETY_TIMEOUT_HOURS,
+        "test_end_required_consecutive_reads": TEST_END_REQUIRED_CONSECUTIVE_READS,
+        "test_end_final_sweep_enabled": TEST_END_FINAL_SWEEP_ENABLED,
         "operator": TEST_OPERATOR,
         "notes": TEST_NOTES,
         "repeat_index": repeat_index,
@@ -342,6 +399,13 @@ def run_one_test(
         "test_root_dir": str(test_root_dir),
         "folder_created_at": folder_created_at.isoformat(timespec="seconds"),
         "test_duration_hours": TEST_DURATION_HOURS,
+        "test_end_mode": str(TEST_END_MODE).strip().lower(),
+        "test_end_sensor": TEST_END_SENSOR_NAME,
+        "test_end_target_c": TEST_END_TARGET_C,
+        "test_end_direction": TEST_END_DIRECTION,
+        "test_end_safety_timeout_hours": TEST_END_SAFETY_TIMEOUT_HOURS,
+        "test_end_required_consecutive_reads": TEST_END_REQUIRED_CONSECUTIVE_READS,
+        "test_end_final_sweep_enabled": TEST_END_FINAL_SWEEP_ENABLED,
         "sweep_interval_seconds": SWEEP_INTERVAL_SECONDS,
         "max_sweeps": MAX_SWEEPS,
         "status": "initializing",
@@ -420,25 +484,66 @@ def run_one_test(
                     f"Event: {keepalive_start_event}"
                 )
 
+        test_end_mode = normalized_test_end_mode()
+        if test_end_mode == "temperature":
+            normalized_test_end_direction()
+
+        required_end_reads = max(1, int(TEST_END_REQUIRED_CONSECUTIVE_READS))
         measurement_start = datetime.now()
-        test_end = measurement_start + timedelta(hours=TEST_DURATION_HOURS)
+
+        if test_end_mode == "time":
+            test_end_deadline = measurement_start + timedelta(
+                hours=float(TEST_DURATION_HOURS)
+            )
+            planned_end_type = "time_limit"
+        else:
+            test_end_deadline = measurement_start + timedelta(
+                hours=float(TEST_END_SAFETY_TIMEOUT_HOURS)
+            )
+            planned_end_type = "temperature_safety_timeout"
 
         test_summary["status"] = "running"
         test_summary["measurement_start_time"] = measurement_start.isoformat(
             timespec="seconds"
         )
-        test_summary["planned_end_time"] = test_end.isoformat(timespec="seconds")
+        test_summary["planned_end_time"] = test_end_deadline.isoformat(
+            timespec="seconds"
+        )
+        test_summary["planned_end_time_type"] = planned_end_type
         write_json(summary_path, test_summary)
 
         print(f"Measurement start: {measurement_start}")
-        print(f"Planned measurement end: {test_end}")
+        if test_end_mode == "time":
+            print(
+                f"Test end: time mode, after {TEST_DURATION_HOURS} h "
+                f"({test_end_deadline})"
+            )
+        else:
+            operator_text = ">=" if normalized_test_end_direction() == "above" else "<="
+            print(
+                f"Test end: temperature mode, {TEST_END_SENSOR_NAME} "
+                f"{operator_text} {float(TEST_END_TARGET_C):.2f} C"
+            )
+            print(
+                f"Safety timeout: {TEST_END_SAFETY_TIMEOUT_HOURS} h "
+                f"({test_end_deadline})"
+            )
+            print(
+                f"Temperature confirmation: {required_end_reads} consecutive "
+                "new logger records"
+            )
         print(f"Sweep interval: {SWEEP_INTERVAL_SECONDS} seconds")
 
         next_trigger_time = datetime.now()
         sweep_index = 1
         consecutive_failures = 0
 
-        while datetime.now() < test_end and sweep_index <= MAX_SWEEPS:
+        end_temp_consecutive_reads = 0
+        end_temp_last_record_identity = None
+        end_temp_last_valid_c = None
+        end_temp_invalid_read_count = 0
+
+        while sweep_index <= MAX_SWEEPS:
             if stop_file_exists(test_root_dir):
                 print("STOP file detected. Ending test after current cycle boundary.")
 
@@ -473,16 +578,135 @@ def run_one_test(
                 write_json(summary_path, test_summary)
                 break
 
-            if not should_trigger_sweep_by_time(next_trigger_time):
+            forced_trigger_reason = None
+            end_after_sweep_reason = None
+            now = datetime.now()
+
+            if test_end_mode == "time":
+                if now >= test_end_deadline:
+                    end_event = {
+                        "timestamp": iso_now(),
+                        "event_type": "test_end_time_reached",
+                        "measurement_start_time": measurement_start.isoformat(
+                            timespec="seconds"
+                        ),
+                        "deadline": test_end_deadline.isoformat(timespec="seconds"),
+                    }
+                    append_event(log_path, test_summary, end_event, summary_path)
+                    test_summary["status"] = "completed"
+                    test_summary["completion_reason"] = "time_limit"
+                    test_summary["end_time"] = iso_now()
+                    write_json(summary_path, test_summary)
+                    break
+
+            else:
+                if now >= test_end_deadline:
+                    end_event = {
+                        "timestamp": iso_now(),
+                        "event_type": "test_end_safety_timeout_reached",
+                        "sensor": TEST_END_SENSOR_NAME,
+                        "target_c": TEST_END_TARGET_C,
+                        "direction": normalized_test_end_direction(),
+                        "last_valid_temperature_c": end_temp_last_valid_c,
+                        "invalid_read_count": end_temp_invalid_read_count,
+                        "safety_timeout_hours": TEST_END_SAFETY_TIMEOUT_HOURS,
+                        "final_sweep_requested": bool(TEST_END_FINAL_SWEEP_ENABLED),
+                    }
+                    append_event(log_path, test_summary, end_event, summary_path)
+
+                    if TEST_END_FINAL_SWEEP_ENABLED:
+                        forced_trigger_reason = "temperature_safety_timeout_final"
+                        end_after_sweep_reason = "temperature_safety_timeout"
+                    else:
+                        test_summary["status"] = "completed"
+                        test_summary["completion_reason"] = "temperature_safety_timeout"
+                        test_summary["end_time"] = iso_now()
+                        test_summary["test_end_last_valid_temperature_c"] = (
+                            end_temp_last_valid_c
+                        )
+                        test_summary["test_end_invalid_read_count"] = (
+                            end_temp_invalid_read_count
+                        )
+                        write_json(summary_path, test_summary)
+                        break
+
+                else:
+                    end_record = temp_logger.get_latest_record()
+                    end_value_c = get_temperature_from_record(
+                        end_record,
+                        TEST_END_SENSOR_NAME,
+                    )
+                    record_identity = temperature_record_identity(end_record)
+
+                    if (
+                        record_identity is not None
+                        and record_identity != end_temp_last_record_identity
+                    ):
+                        end_temp_last_record_identity = record_identity
+
+                        if end_value_c is None:
+                            end_temp_invalid_read_count += 1
+                            end_temp_consecutive_reads = 0
+                        else:
+                            end_temp_last_valid_c = end_value_c
+
+                            if temperature_end_condition_met(end_value_c):
+                                end_temp_consecutive_reads += 1
+                            else:
+                                end_temp_consecutive_reads = 0
+
+                        if end_temp_consecutive_reads >= required_end_reads:
+                            end_event = {
+                                "timestamp": iso_now(),
+                                "event_type": "test_end_temperature_reached",
+                                "sensor": TEST_END_SENSOR_NAME,
+                                "target_c": TEST_END_TARGET_C,
+                                "direction": normalized_test_end_direction(),
+                                "temperature_c": end_value_c,
+                                "consecutive_reads": end_temp_consecutive_reads,
+                                "final_sweep_requested": bool(
+                                    TEST_END_FINAL_SWEEP_ENABLED
+                                ),
+                            }
+                            append_event(
+                                log_path,
+                                test_summary,
+                                end_event,
+                                summary_path,
+                            )
+
+                            if TEST_END_FINAL_SWEEP_ENABLED:
+                                forced_trigger_reason = "temperature_target_final"
+                                end_after_sweep_reason = "temperature_target"
+                            else:
+                                test_summary["status"] = "completed"
+                                test_summary["completion_reason"] = (
+                                    "temperature_target"
+                                )
+                                test_summary["end_time"] = iso_now()
+                                test_summary[
+                                    "test_end_temperature_c"
+                                ] = end_value_c
+                                test_summary[
+                                    "test_end_invalid_read_count"
+                                ] = end_temp_invalid_read_count
+                                write_json(summary_path, test_summary)
+                                break
+
+            if (
+                forced_trigger_reason is None
+                and not should_trigger_sweep_by_time(next_trigger_time)
+            ):
                 time.sleep(1)
                 continue
 
+            trigger_reason = forced_trigger_reason or "time_interval"
             latest_temp = temp_logger.get_latest_record()
 
             event = {
                 "timestamp": iso_now(),
                 "sweep_index": sweep_index,
-                "trigger_reason": "time_interval",
+                "trigger_reason": trigger_reason,
                 "status": "started",
                 "latest_temperature_record": latest_temp,
             }
@@ -495,7 +719,7 @@ def run_one_test(
                 local_run_dir = run_single_sweep(
                     test_root_dir=test_root_dir,
                     sweep_index=sweep_index,
-                    trigger_reason="time_interval",
+                    trigger_reason=trigger_reason,
                     temperature_before_sweep=temperature_before_sweep,
                     temperature_after_sweep=None,
                     hall_reader=temp_logger.is_hall_active,
@@ -555,8 +779,22 @@ def run_one_test(
 
                 check_storage(test_root_dir)
 
+            if end_after_sweep_reason is not None:
+                test_summary["status"] = "completed"
+                test_summary["completion_reason"] = end_after_sweep_reason
+                test_summary["end_time"] = iso_now()
+                test_summary["test_end_last_valid_temperature_c"] = (
+                    end_temp_last_valid_c
+                )
+                test_summary["test_end_invalid_read_count"] = (
+                    end_temp_invalid_read_count
+                )
+                write_json(summary_path, test_summary)
+                break
+
         if test_summary["status"] == "running":
             test_summary["status"] = "completed"
+            test_summary["completion_reason"] = "max_sweeps"
             test_summary["end_time"] = iso_now()
 
     except Exception as e:
