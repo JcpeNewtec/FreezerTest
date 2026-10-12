@@ -30,6 +30,7 @@ from Config.system_config import (
     CAMERA_INTERNAL_TEMPERATURE_ENABLED,
     CAMERA_KEEPALIVE_STOP_BEFORE_SWEEP,
     CAMERA_KEEPALIVE_RESTART_AFTER_SWEEP,
+    CAMERA_CAPTURE_DEVICE_RELEASE_WAIT_S,
     REMOTE_DATA_ROOT,
     LOCAL_DATA_ROOT,
     FILTERWHEEL_HOME_ENABLED,
@@ -293,7 +294,7 @@ def run_single_sweep(
             sweep_summary["camera_keepalive_stream_events"].append(
                 camera_keepalive_stream.stop(reason=f"before_sweep_{sweep_index:04d}_capture")
             )
-            time.sleep(0.5)
+            time.sleep(max(0.0, float(CAMERA_CAPTURE_DEVICE_RELEASE_WAIT_S)))
             
         lamp_was_turned_on = False
         

@@ -38,6 +38,16 @@ CAMERA_POWER_ACTIVE_STATE = 1
 CAMERA_POWER_BOOT_WAIT_S = 45.0
 CAMERA_POWER_OFF_AT_TEST_END = True
 
+# Automatic camera recovery for long unattended tests.
+# Some V4L2/GStreamer failures (for example buffer-pool/CMA allocation
+# failures) leave the camera capture path unusable until the camera is
+# power-cycled. When one of those known errors is detected, the long-test
+# runner can automatically reboot only the camera and continue.
+CAMERA_AUTO_RECOVERY_ENABLED = True
+CAMERA_AUTO_RECOVERY_MAX_PER_TEST = 3
+CAMERA_AUTO_RECOVERY_POWER_OFF_WAIT_S = 15.0
+
+
 # Freezer contactor control through MCC DIO
 FREEZER_CONTROL_ENABLED = True
 FREEZER_DIO_BIT = 3
@@ -99,6 +109,9 @@ CAMERA_KEEPALIVE_STREAM_LOG_FILE = "/tmp/freezertest_keepalive_stream.log"
 CAMERA_KEEPALIVE_KILL_STALE_ON_START = True
 CAMERA_KEEPALIVE_STOP_BEFORE_SWEEP = True
 CAMERA_KEEPALIVE_RESTART_AFTER_SWEEP = True
+# Give the kernel/driver a little time to release V4L2 mmap/DMA buffers after
+# the keepalive process stops before a still-capture pipeline is opened.
+CAMERA_CAPTURE_DEVICE_RELEASE_WAIT_S = 2.0
 
 REMOTE_DATA_ROOT = "/root/scripts/data"
 

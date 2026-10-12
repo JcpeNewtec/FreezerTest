@@ -33,6 +33,9 @@ from Config.system_config import (
     CAMERA_POWER_CONTROL_ENABLED,
     CAMERA_POWER_BOOT_WAIT_S,
     CAMERA_POWER_OFF_AT_TEST_END,
+    CAMERA_AUTO_RECOVERY_ENABLED,
+    CAMERA_AUTO_RECOVERY_MAX_PER_TEST,
+    CAMERA_AUTO_RECOVERY_POWER_OFF_WAIT_S,
     CAMERA_KEEPALIVE_STREAM_ENABLED,
     CAMERA_ID,
     TEST_OPERATOR,
@@ -168,6 +171,96 @@ def temperature_record_identity(record: dict | None):
 
     # Fallback for older logger records without a timestamp.
     return id(record)
+
+
+RECOVERABLE_CAMERA_ERROR_MARKERS = (
+    "failed to allocate required memory",
+    "buffer pool activation failed",
+    "vidioc_reqbufs returned -1",
+    "device or resource busy",
+    "device '/dev/video4' is busy",
+)
+
+
+def is_recoverable_camera_capture_error(exc: Exception) -> bool:
+    """Return True for V4L2/GStreamer failures that a camera reboot may clear."""
+    error_text = str(exc).lower()
+    return any(marker in error_text for marker in RECOVERABLE_CAMERA_ERROR_MARKERS)
+
+
+def recover_camera_capture_path(
+    temp_logger: TemperatureLogger,
+    camera_keepalive_stream,
+    repeat_index: int,
+    sweep_index: int,
+) -> dict:
+    """Power-cycle only the camera and restore the keepalive stream.
+
+    The freezer, MCC logger and host-side test process remain running. This is
+    intended for persistent V4L2 buffer-pool/resource failures that do not
+    recover from a normal retry.
+    """
+    event = {
+        "timestamp": iso_now(),
+        "event_type": "camera_auto_recovery",
+        "repeat_index": repeat_index,
+        "failed_sweep_index": sweep_index,
+        "status": "started",
+        "power_off_wait_s": float(CAMERA_AUTO_RECOVERY_POWER_OFF_WAIT_S),
+        "boot_wait_s": float(CAMERA_POWER_BOOT_WAIT_S),
+    }
+
+    if not CAMERA_POWER_CONTROL_ENABLED:
+        raise RuntimeError(
+            "Camera auto-recovery requires CAMERA_POWER_CONTROL_ENABLED=True."
+        )
+
+    try:
+        if camera_keepalive_stream is not None:
+            event["keepalive_stop"] = camera_keepalive_stream.stop(
+                reason=f"auto_recovery_before_sweep_{sweep_index:04d}"
+            )
+
+        # The sweep normally turns the lamp off in its own finally block, but
+        # force it off here as well before cycling camera power.
+        try:
+            event["lamp_off_record"] = temp_logger.lamp_off()
+        except Exception as lamp_exc:
+            event["lamp_off_warning"] = str(lamp_exc)
+
+        print("Camera recovery: powering camera OFF...")
+        event["camera_power_off_record"] = temp_logger.camera_power_off()
+        time.sleep(max(0.0, float(CAMERA_AUTO_RECOVERY_POWER_OFF_WAIT_S)))
+
+        print("Camera recovery: powering camera ON...")
+        event["camera_power_on_record"] = temp_logger.camera_power_on()
+        print(
+            f"Camera recovery: waiting {CAMERA_POWER_BOOT_WAIT_S} s for boot..."
+        )
+        time.sleep(max(0.0, float(CAMERA_POWER_BOOT_WAIT_S)))
+
+        if camera_keepalive_stream is not None:
+            keepalive_start = camera_keepalive_stream.start(
+                reason=f"auto_recovery_after_sweep_{sweep_index:04d}"
+            )
+            event["keepalive_start"] = keepalive_start
+            if not keepalive_start.get("running", False):
+                raise RuntimeError(
+                    "Camera reboot completed, but keepalive stream did not restart. "
+                    f"Event: {keepalive_start}"
+                )
+
+        event["status"] = "success"
+        event["finished_at"] = iso_now()
+        return event
+
+    except Exception as recovery_exc:
+        event["status"] = "failed"
+        event["finished_at"] = iso_now()
+        event["error"] = str(recovery_exc)
+        raise RuntimeError(
+            f"Camera auto-recovery failed: {recovery_exc}"
+        ) from recovery_exc
 
 
 def wait_for_first_temperature_record(
@@ -391,6 +484,8 @@ def run_one_test(
         "precool_sensor": PRECOOL_SENSOR_NAME,
         "precool_target_c": PRECOOL_TARGET_C,
         "camera_keepalive_stream_enabled": CAMERA_KEEPALIVE_STREAM_ENABLED,
+        "camera_auto_recovery_enabled": CAMERA_AUTO_RECOVERY_ENABLED,
+        "camera_auto_recovery_max_per_test": CAMERA_AUTO_RECOVERY_MAX_PER_TEST,
     }
     write_json(metadata_path, test_metadata)
 
@@ -423,6 +518,10 @@ def run_one_test(
         "precool_target_c": PRECOOL_TARGET_C,
         "camera_keepalive_stream_enabled": CAMERA_KEEPALIVE_STREAM_ENABLED,
         "camera_keepalive_stream_events": [],
+        "camera_auto_recovery_enabled": CAMERA_AUTO_RECOVERY_ENABLED,
+        "camera_auto_recovery_max_per_test": CAMERA_AUTO_RECOVERY_MAX_PER_TEST,
+        "camera_auto_recovery_count": 0,
+        "camera_auto_recovery_events": [],
     }
     write_json(summary_path, test_summary)
 
@@ -537,6 +636,7 @@ def run_one_test(
         next_trigger_time = datetime.now()
         sweep_index = 1
         consecutive_failures = 0
+        camera_recovery_count = 0
 
         end_temp_consecutive_reads = 0
         end_temp_last_record_identity = None
@@ -710,6 +810,8 @@ def run_one_test(
                 "status": "started",
                 "latest_temperature_record": latest_temp,
             }
+            retry_immediately_after_recovery = False
+            sweep_succeeded = False
 
             try:
                 print(f"\nStarting sweep {sweep_index}...")
@@ -749,37 +851,85 @@ def run_one_test(
                 event["sweep_summary_path"] = str(sweep_summary_path)
 
                 consecutive_failures = 0
+                sweep_succeeded = True
                 test_summary["completed_sweeps"] += 1
 
             except Exception as e:
                 event["status"] = "failed"
                 event["error"] = str(e)
-
-                consecutive_failures += 1
                 test_summary["failed_sweeps"] += 1
 
                 print(f"Sweep {sweep_index} failed: {e}")
 
-                if consecutive_failures >= MAX_CONSECUTIVE_FAILURES:
-                    raise RuntimeError(
-                        f"Stopping test after {consecutive_failures} "
-                        "consecutive failures."
+                recoverable_camera_error = (
+                    CAMERA_AUTO_RECOVERY_ENABLED
+                    and is_recoverable_camera_capture_error(e)
+                )
+
+                if recoverable_camera_error:
+                    if camera_recovery_count >= int(CAMERA_AUTO_RECOVERY_MAX_PER_TEST):
+                        raise RuntimeError(
+                            "Camera capture resource failure detected, but the "
+                            f"auto-recovery limit ({CAMERA_AUTO_RECOVERY_MAX_PER_TEST}) "
+                            "has already been reached."
+                        ) from e
+
+                    camera_recovery_count += 1
+                    print(
+                        "Detected recoverable V4L2/camera capture failure. "
+                        f"Starting camera recovery {camera_recovery_count}/"
+                        f"{CAMERA_AUTO_RECOVERY_MAX_PER_TEST}..."
                     )
 
-                print(f"Waiting {RETRY_DELAY_SECONDS} seconds before continuing...")
-                time.sleep(RETRY_DELAY_SECONDS)
+                    recovery_event = recover_camera_capture_path(
+                        temp_logger=temp_logger,
+                        camera_keepalive_stream=camera_keepalive_stream,
+                        repeat_index=repeat_index,
+                        sweep_index=sweep_index,
+                    )
+                    event["camera_auto_recovery"] = recovery_event
+                    test_summary["camera_auto_recovery_count"] = camera_recovery_count
+                    test_summary["camera_auto_recovery_events"].append(recovery_event)
+                    write_json(summary_path, test_summary)
+
+                    # A successful power cycle clears the consecutive-failure
+                    # streak. Start the next sweep immediately rather than
+                    # waiting a full normal sweep interval.
+                    consecutive_failures = 0
+                    retry_immediately_after_recovery = True
+                    print(
+                        "Camera recovery succeeded. Continuing with the next "
+                        "sweep immediately."
+                    )
+
+                else:
+                    consecutive_failures += 1
+
+                    if consecutive_failures >= MAX_CONSECUTIVE_FAILURES:
+                        raise RuntimeError(
+                            f"Stopping test after {consecutive_failures} "
+                            "consecutive failures."
+                        )
+
+                    print(
+                        f"Waiting {RETRY_DELAY_SECONDS} seconds before continuing..."
+                    )
+                    time.sleep(RETRY_DELAY_SECONDS)
 
             finally:
                 append_event(log_path, test_summary, event, summary_path)
 
                 sweep_index += 1
-                next_trigger_time = datetime.now() + timedelta(
-                    seconds=SWEEP_INTERVAL_SECONDS
-                )
+                if retry_immediately_after_recovery:
+                    next_trigger_time = datetime.now()
+                else:
+                    next_trigger_time = datetime.now() + timedelta(
+                        seconds=SWEEP_INTERVAL_SECONDS
+                    )
 
                 check_storage(test_root_dir)
 
-            if end_after_sweep_reason is not None:
+            if end_after_sweep_reason is not None and sweep_succeeded:
                 test_summary["status"] = "completed"
                 test_summary["completion_reason"] = end_after_sweep_reason
                 test_summary["end_time"] = iso_now()

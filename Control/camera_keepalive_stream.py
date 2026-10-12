@@ -188,18 +188,31 @@ echo "$PID"
         command = f"""
 set +e
 STOPPED=0
+FORCED=0
 PID=''
 if [ -f {pid_file_q} ]; then
     PID=$(cat {pid_file_q} 2>/dev/null || true)
     if [ -n "$PID" ]; then
         kill "$PID" 2>/dev/null || true
-        sleep 0.5
-        kill -9 "$PID" 2>/dev/null || true
+
+        # Prefer a clean exit so the V4L2 driver can release mmap/DMA
+        # buffers normally. Wait up to about 3 seconds before SIGKILL.
+        i=0
+        while kill -0 "$PID" 2>/dev/null && [ "$i" -lt 30 ]; do
+            sleep 0.1
+            i=$((i + 1))
+        done
+
+        if kill -0 "$PID" 2>/dev/null; then
+            kill -9 "$PID" 2>/dev/null || true
+            FORCED=1
+            sleep 0.2
+        fi
         STOPPED=1
     fi
     rm -f {pid_file_q}
 fi
-echo "PID=$PID STOPPED=$STOPPED"
+echo "PID=$PID STOPPED=$STOPPED FORCED=$FORCED"
 """
 
         result = self._run_ssh(command, timeout=10, check=False)
