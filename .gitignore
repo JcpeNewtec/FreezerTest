@@ -13,3 +13,10 @@ Test_Results/
 *.tmp
 
 Config/local_config.py
+
+# Knowledge-base import records are documentation, not measurement logs.
+!knowledge_base/exports/documents.jsonl
+!knowledge_base/exports/chunks.jsonl
+
+# Rebuild the ZIP locally; keep generated binary archives out of Git history.
+knowledge_base/exports/*.zip

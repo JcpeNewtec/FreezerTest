@@ -1,0 +1,333 @@
+{
+  "kb_version": "0.1",
+  "compiled_date": "2026-10-23",
+  "review_status": "first_review_draft",
+  "repository": "https://github.com/JcpeNewtec/FreezerTest",
+  "remote_commit": "df4ccebbbd0f41e32f5ae415e967728e5845d56b",
+  "remote_commit_date": "2026-10-12T09:24:36+02:00",
+  "shared_sources_identical": 33,
+  "local_only_sources": [
+    "Config/local_config.py"
+  ],
+  "source_files": [
+    {
+      "path": "Camera_scripts/camera_config.py",
+      "sha256": "cebad7e45fef2afc363c0f194a114a4753a49adc6c9aefdedbe469a63f05c74f",
+      "line_count": 13,
+      "remote_status": "identical",
+      "reviewed_for": "setup, software behavior, configuration, operation, data, or analysis methodology",
+      "github_permalink": "https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Camera_scripts/camera_config.py"
+    },
+    {
+      "path": "Camera_scripts/camera_control.py",
+      "sha256": "e42d3435da8f9a3119bb49d14500d14a1b8cbfc5890d02c8124011b1c27583f0",
+      "line_count": 179,
+      "remote_status": "identical",
+      "reviewed_for": "setup, software behavior, configuration, operation, data, or analysis methodology",
+      "github_permalink": "https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Camera_scripts/camera_control.py"
+    },
+    {
+      "path": "Camera_scripts/capture_remote.py",
+      "sha256": "fff886d9da1eb46257c1727b18e584da9d6cae3c285a4e6ea8095b8de1c247ae",
+      "line_count": 49,
+      "remote_status": "identical",
+      "reviewed_for": "setup, software behavior, configuration, operation, data, or analysis methodology",
+      "github_permalink": "https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Camera_scripts/capture_remote.py"
+    },
+    {
+      "path": "Camera_scripts/read_camera_temperatures.py",
+      "sha256": "6bb2fbb5ee57296e6cf876bd3802a2dbc3ea5008eafac7f51536fb1482496dd5",
+      "line_count": 406,
+      "remote_status": "identical",
+      "reviewed_for": "setup, software behavior, configuration, operation, data, or analysis methodology",
+      "github_permalink": "https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Camera_scripts/read_camera_temperatures.py"
+    },
+    {
+      "path": "Config/analysis_config.py",
+      "sha256": "750011395fe8c747be692d38a8840491b5ea287535e945fd058cfcbf42278216",
+      "line_count": 124,
+      "remote_status": "identical",
+      "reviewed_for": "setup, software behavior, configuration, operation, data, or analysis methodology",
+      "github_permalink": "https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Config/analysis_config.py"
+    },
+    {
+      "path": "Config/local_config.py",
+      "sha256": "effc81ea809cf788e2933789a9a971b36d0737b40464604ed11394df659ac79d",
+      "line_count": 69,
+      "remote_status": "local_only",
+      "reviewed_for": "setup, software behavior, configuration, operation, data, or analysis methodology"
+    },
+    {
+      "path": "Config/system_config.py",
+      "sha256": "2910ed501d34731ef53139d9c5bd91b8d1306c75dde7db424bdfc7f03655803f",
+      "line_count": 172,
+      "remote_status": "identical",
+      "reviewed_for": "setup, software behavior, configuration, operation, data, or analysis methodology",
+      "github_permalink": "https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Config/system_config.py"
+    },
+    {
+      "path": "Config/temperature_config.py",
+      "sha256": "8719c573bf823ed5576198db0f42874f1a35c0d5097dee99a69bde3945cd03cc",
+      "line_count": 21,
+      "remote_status": "identical",
+      "reviewed_for": "setup, software behavior, configuration, operation, data, or analysis methodology",
+      "github_permalink": "https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Config/temperature_config.py"
+    },
+    {
+      "path": "Control/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "line_count": 0,
+      "remote_status": "identical",
+      "reviewed_for": "setup, software behavior, configuration, operation, data, or analysis methodology",
+      "github_permalink": "https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Control/__init__.py"
+    },
+    {
+      "path": "Control/camera_keepalive_stream.py",
+      "sha256": "f610993e6a988bde12ccb2247227c3517d0f4bd72d4b34816cc097bb6dd989ed",
+      "line_count": 231,
+      "remote_status": "identical",
+      "reviewed_for": "setup, software behavior, configuration, operation, data, or analysis methodology",
+      "github_permalink": "https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Control/camera_keepalive_stream.py"
+    },
+    {
+      "path": "Control/filterwheel_control.py",
+      "sha256": "18bb8a49ae48435eb69dfc49916b0721c79b00e32304b17c32ded149987a4c57",
+      "line_count": 248,
+      "remote_status": "identical",
+      "reviewed_for": "setup, software behavior, configuration, operation, data, or analysis methodology",
+      "github_permalink": "https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Control/filterwheel_control.py"
+    },
+    {
+      "path": "Control/temperature_control.py",
+      "sha256": "d68adc376cdb5dbfaec0d25200a8aa74fc82e0c94cc178765724ec09891ab587",
+      "line_count": 233,
+      "remote_status": "identical",
+      "reviewed_for": "setup, software behavior, configuration, operation, data, or analysis methodology",
+      "github_permalink": "https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Control/temperature_control.py"
+    },
+    {
+      "path": "Control/temperature_logger.py",
+      "sha256": "5a38e325e4d35f45cbfca1c6c50254234aa0f7e591cb9d9f96580e41022ea013",
+      "line_count": 159,
+      "remote_status": "identical",
+      "reviewed_for": "setup, software behavior, configuration, operation, data, or analysis methodology",
+      "github_permalink": "https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Control/temperature_logger.py"
+    },
+    {
+      "path": "Scripts/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "line_count": 0,
+      "remote_status": "identical",
+      "reviewed_for": "setup, software behavior, configuration, operation, data, or analysis methodology",
+      "github_permalink": "https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/__init__.py"
+    },
+    {
+      "path": "Scripts/analyze_repeat_tests.py",
+      "sha256": "7c51b50e711bd75dfa6ff3a8d5dd1c7244d596cee5d9b381cdb6bb38600d3fdf",
+      "line_count": 366,
+      "remote_status": "identical",
+      "reviewed_for": "setup, software behavior, configuration, operation, data, or analysis methodology",
+      "github_permalink": "https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/analyze_repeat_tests.py"
+    },
+    {
+      "path": "Scripts/analyze_test_folder.py",
+      "sha256": "4d08f616ca582739e3fc71bb8e8e47c6b2fda102519ea7abf07d705699d9582b",
+      "line_count": 1361,
+      "remote_status": "identical",
+      "reviewed_for": "setup, software behavior, configuration, operation, data, or analysis methodology",
+      "github_permalink": "https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/analyze_test_folder.py"
+    },
+    {
+      "path": "Scripts/calibrate_filterwheel.py",
+      "sha256": "a49c978c24862072539b842dbd24c2b57922a2a28d05f2cb13f3a9d359e192bd",
+      "line_count": 234,
+      "remote_status": "identical",
+      "reviewed_for": "setup, software behavior, configuration, operation, data, or analysis methodology",
+      "github_permalink": "https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/calibrate_filterwheel.py"
+    },
+    {
+      "path": "Scripts/compare_tests_streamlit.py",
+      "sha256": "8060400c4aecd0d6788d0575fdcb3dbdab17821fa99492d601717b50915d3dfc",
+      "line_count": 1137,
+      "remote_status": "identical",
+      "reviewed_for": "setup, software behavior, configuration, operation, data, or analysis methodology",
+      "github_permalink": "https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/compare_tests_streamlit.py"
+    },
+    {
+      "path": "Scripts/compare_tests_streamlit_updated.py",
+      "sha256": "675a8ae36e9bf1194271377ef7729b6a1d2edf304940beee47ecb56ced1c8f21",
+      "line_count": 1642,
+      "remote_status": "identical",
+      "reviewed_for": "setup, software behavior, configuration, operation, data, or analysis methodology",
+      "github_permalink": "https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/compare_tests_streamlit_updated.py"
+    },
+    {
+      "path": "Scripts/deploy_camera_scripts.sh",
+      "sha256": "a8e7a1d2b39579e7eb34bb2a8d9c0cb15bfd79354aa216f21abd2c18ccf979d3",
+      "line_count": 14,
+      "remote_status": "identical",
+      "reviewed_for": "setup, software behavior, configuration, operation, data, or analysis methodology",
+      "github_permalink": "https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/deploy_camera_scripts.sh"
+    },
+    {
+      "path": "Scripts/preflight_check.py",
+      "sha256": "f67a8f16abf4d01d8029bed57c410126fb6aa7020b3947d6d7453b8ca6cbef4f",
+      "line_count": 315,
+      "remote_status": "identical",
+      "reviewed_for": "setup, software behavior, configuration, operation, data, or analysis methodology",
+      "github_permalink": "https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/preflight_check.py"
+    },
+    {
+      "path": "Scripts/preview_analysis_rois.py",
+      "sha256": "d85bc58889f285a3b536ce7e3e5ba78d06fb2eb3bdcda257aeef5af8de5f6324",
+      "line_count": 308,
+      "remote_status": "identical",
+      "reviewed_for": "setup, software behavior, configuration, operation, data, or analysis methodology",
+      "github_permalink": "https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/preview_analysis_rois.py"
+    },
+    {
+      "path": "Scripts/read_temp_loop.py",
+      "sha256": "37a55f8b2c30d3a9fed8e442952024e53151a4488527807f7d5d79f9b3c884ac",
+      "line_count": 38,
+      "remote_status": "identical",
+      "reviewed_for": "setup, software behavior, configuration, operation, data, or analysis methodology",
+      "github_permalink": "https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/read_temp_loop.py"
+    },
+    {
+      "path": "Scripts/repair_and_rename_repeat_folders.py",
+      "sha256": "de208ee323c093499b7b9a266cd3f93e3d83697a99ebc87cd9c8af9afc4128ac",
+      "line_count": 278,
+      "remote_status": "identical",
+      "reviewed_for": "setup, software behavior, configuration, operation, data, or analysis methodology",
+      "github_permalink": "https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/repair_and_rename_repeat_folders.py"
+    },
+    {
+      "path": "Scripts/repair_repeat_group_metadata.py",
+      "sha256": "8d00749e688824626324e21fdd1bcd748216b817b938c1a147c187d73f8df4fd",
+      "line_count": 211,
+      "remote_status": "identical",
+      "reviewed_for": "setup, software behavior, configuration, operation, data, or analysis methodology",
+      "github_permalink": "https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/repair_repeat_group_metadata.py"
+    },
+    {
+      "path": "Scripts/run_long_test.py",
+      "sha256": "785ea2ca3ba7a28c7d8e1be5157b759e8a8e07bf16994ce2555689d43e74eddb",
+      "line_count": 1058,
+      "remote_status": "identical",
+      "reviewed_for": "setup, software behavior, configuration, operation, data, or analysis methodology",
+      "github_permalink": "https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/run_long_test.py"
+    },
+    {
+      "path": "Scripts/run_single_sweep_remote.py",
+      "sha256": "50db4b2e9a87d62fb06388913f2ed97d64702772a4c829c6fd177fc1024200e6",
+      "line_count": 428,
+      "remote_status": "identical",
+      "reviewed_for": "setup, software behavior, configuration, operation, data, or analysis methodology",
+      "github_permalink": "https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/run_single_sweep_remote.py"
+    },
+    {
+      "path": "Scripts/test_camera_internal_temperatures.py",
+      "sha256": "c77d4d297f226127d18048f27309c1b57bcfd907454b81e38223610fb0a4de21",
+      "line_count": 23,
+      "remote_status": "identical",
+      "reviewed_for": "setup, software behavior, configuration, operation, data, or analysis methodology",
+      "github_permalink": "https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/test_camera_internal_temperatures.py"
+    },
+    {
+      "path": "Scripts/test_capture_with_keepalive_stream.py",
+      "sha256": "f014dd4387494338ae7a2f558bd989132f49821c9ffc8ffae9dc1f60e63d3321",
+      "line_count": 277,
+      "remote_status": "identical",
+      "reviewed_for": "setup, software behavior, configuration, operation, data, or analysis methodology",
+      "github_permalink": "https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/test_capture_with_keepalive_stream.py"
+    },
+    {
+      "path": "Scripts/test_filterwheel_idle_current.py",
+      "sha256": "01f27324ad90883af7b1f80b91b93f15a5f69c1bcb38b46450f29ac1a47d6625",
+      "line_count": 77,
+      "remote_status": "identical",
+      "reviewed_for": "setup, software behavior, configuration, operation, data, or analysis methodology",
+      "github_permalink": "https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/test_filterwheel_idle_current.py"
+    },
+    {
+      "path": "Scripts/test_freezer_relay.py",
+      "sha256": "3b176158bb7c7338b2df240ab31dd28c37e0b9e82978faa86cc5116b5ef1c04a",
+      "line_count": 118,
+      "remote_status": "identical",
+      "reviewed_for": "setup, software behavior, configuration, operation, data, or analysis methodology",
+      "github_permalink": "https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/test_freezer_relay.py"
+    },
+    {
+      "path": "Scripts/test_hall_sensor.py",
+      "sha256": "055ebbed8c1c9282c1125afb8993b65dd777769bec1111984d2bb681c4e65d42",
+      "line_count": 52,
+      "remote_status": "identical",
+      "reviewed_for": "setup, software behavior, configuration, operation, data, or analysis methodology",
+      "github_permalink": "https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/test_hall_sensor.py"
+    },
+    {
+      "path": "Scripts/test_homing_repeatability.py",
+      "sha256": "cfb0669490360ece1bfd42c7eead8a0e5a4b71d540e38079fb501d752edd09fe",
+      "line_count": 121,
+      "remote_status": "identical",
+      "reviewed_for": "setup, software behavior, configuration, operation, data, or analysis methodology",
+      "github_permalink": "https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/test_homing_repeatability.py"
+    },
+    {
+      "path": "Scripts/test_keepalive_pause_capture.py",
+      "sha256": "a09f91e8998420405a21b11466bc4ba5cd79b611bd39d911ccbe8ca17be01f1d",
+      "line_count": 201,
+      "remote_status": "identical",
+      "reviewed_for": "setup, software behavior, configuration, operation, data, or analysis methodology",
+      "github_permalink": "https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/test_keepalive_pause_capture.py"
+    }
+  ],
+  "chat_sources": [
+    {
+      "id": "T1",
+      "title": "Python script for Tic controller",
+      "thread_id": "69c27f47-b918-8332-9528-8829c6cb15a5",
+      "returned_turns": 5,
+      "message_date_range": [
+        "2026-10-16",
+        "2026-10-20"
+      ]
+    },
+    {
+      "id": "T2",
+      "title": "Freezer Camera Drift Analysis",
+      "thread_id": "6a958572-5e20-83eb-b7ce-cc69aed852b1",
+      "returned_turns": 1,
+      "message_date_range": [
+        "2026-08-31",
+        "2026-08-31"
+      ]
+    },
+    {
+      "id": "T3",
+      "title": "Temperature Test Control",
+      "thread_id": "69a042fe-5b60-832f-a9a2-84e30d73da47",
+      "returned_turns": 5,
+      "message_date_range": [
+        "2026-04-22",
+        "2026-06-22"
+      ]
+    }
+  ],
+  "chat_coverage_limit": "Only returned turns from three listed matching chats. No full-history or attachment access was established.",
+  "excluded": [
+    {
+      "path": "calibration_temperature_log.jsonl",
+      "reason": "Measured log excluded from setup/methodology corpus"
+    },
+    {
+      "path": "**/__pycache__/**",
+      "reason": "Compiled cache, not canonical source"
+    },
+    {
+      "path": "individual test results and prior chat result logs",
+      "reason": "Reserved for future camera-development knowledge base"
+    }
+  ],
+  "local_config_published_reference": "knowledge_base/reference/local_config_snapshot.txt"
+}

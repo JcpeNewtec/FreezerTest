@@ -1,0 +1,61 @@
+{
+  "kb_version": "0.1",
+  "compiled_date": "2026-10-23",
+  "documents": 13,
+  "chunks": 120,
+  "max_chunk_characters": 4500,
+  "inputs": [
+    {
+      "path": "knowledge_base/README.md",
+      "sha256": "a3c54d4213a1557cfacd2163825331479054eaf29e2573fd71cac25a50e7b729"
+    },
+    {
+      "path": "knowledge_base/01-purpose-and-system-overview.md",
+      "sha256": "163fc7f0b0be453ad9517369da51348cb5503550474441c2ebedaccf94b0415d"
+    },
+    {
+      "path": "knowledge_base/02-hardware-and-connections.md",
+      "sha256": "1372c90c5333ccdc8762df59a620c475e8570e7ae2213aa7a9f8f2bfd2fda07d"
+    },
+    {
+      "path": "knowledge_base/03-software-and-configuration.md",
+      "sha256": "e2620bf6d229292c7dadbfdd3c5ecc3392fea9fb40129ebb4b6d204e976add75"
+    },
+    {
+      "path": "knowledge_base/04-running-the-test.md",
+      "sha256": "5c647bc731da01dc3b5349e1d13913474b18f6eab9c149637838c8379d6a644e"
+    },
+    {
+      "path": "knowledge_base/05-data-and-metadata.md",
+      "sha256": "1922750221a203e9aee4e8b1d849230c8588a277890044ceb6e1b1acc83179e4"
+    },
+    {
+      "path": "knowledge_base/06-analysis-methodology.md",
+      "sha256": "19bc17bbfa8cb6e0784c4c80672076e29fba2faba969c4c29266d0d46df9e72a"
+    },
+    {
+      "path": "knowledge_base/07-analysis-tools-and-troubleshooting.md",
+      "sha256": "0d041465a7d7478119d687ac578124f175c0f0777bc204261072e4d191bb159f"
+    },
+    {
+      "path": "knowledge_base/08-project-context.md",
+      "sha256": "6b7668bc0a8e758c98b43f36e1eb2353725f10b08fc270ee1d72734ba062c6f3"
+    },
+    {
+      "path": "knowledge_base/09-review-questions-and-gaps.md",
+      "sha256": "25fbfbb2b7bab9fe57c3007e7ac5bdf8c1cf9fcc806c8212c7b5d93d17f2e10c"
+    },
+    {
+      "path": "knowledge_base/10-sources-and-maintenance.md",
+      "sha256": "39e6cb9bc67af2a00fee9333933f2ad0a017e536f322dd939f3ecb71b67df956"
+    },
+    {
+      "path": "knowledge_base/11-local-ai-guide.md",
+      "sha256": "a325b53995310e90916ff78af5f14e26fcd0e9123fe49c662fdd15d7d88b6d5c"
+    },
+    {
+      "path": "knowledge_base/12-glossary.md",
+      "sha256": "64a6df833253e352762098ea83687ade7532cb0d0ca418b7e7ef26052ce3d62e"
+    }
+  ]
+}
