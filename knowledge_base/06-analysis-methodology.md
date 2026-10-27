@@ -1,19 +1,21 @@
 # Freezer test analysis methodology
 
-Status: first version, derived from the supplied source code; requires owner review of the experimental rationale and physical interpretation. Source inspection date: 2026-10-23. This page describes methods and limitations, without reporting individual test results.
+Status: source-derived methodology with owner clarifications from 2026-10-27; remaining validation questions are listed below. Source inspection date: 2026-10-23. This page describes methods and limitations, without reporting individual test results.
 
 ## What the analysis measures
 
 The analysis follows features in camera images while recording the temperatures associated with each acquisition sweep. A sweep contains images from the configured filter positions. The current filter-to-analysis mapping is:
 
-| Filter position | Analysis name | Processing | Nominal wavelength | Configured optical filter FWHM |
-| --- | --- | --- | --- | --- |
-| 1 | `no_filter` | Spatial edge and signal statistics | Not specified | Not specified |
-| 2 | `bp_780` | Spectral line profile | 780 nm | 3 nm |
-| 3 | `bp_1064` | Spectral line profile | 1064 nm | 3 nm |
-| 4 | `bp_1550` | Spectral line profile and background-region statistics | 1550 nm | 4 nm |
+| Filter position | Analysis name | Filter identity | Processing | Nominal wavelength | Configured optical filter FWHM |
+| --- | --- | --- | --- | --- | --- |
+| 1 | `no_filter` | Open position | Spatial edge and signal statistics | Not applicable | Not applicable |
+| 2 | `bp_780` | Thorlabs [FBH780-3](https://www.thorlabs.com/item/FBH780-3) | Spectral line profile | 780 nm | 3 nm |
+| 3 | `bp_1064` | Thorlabs [FLH1064-3](https://www.thorlabs.com/item/FLH1064-3) | Spectral line profile | 1064 nm | 3 nm |
+| 4 | `bp_1550` | Thorlabs [FBH1550-4](https://www.thorlabs.com/item/FBH1550-4) | Spectral line profile and background-region statistics | 1550 nm | 4 nm |
 
-These are configuration values, rather than measured transmission curves or component specifications. Filter bandwidth in nm is metadata; the implemented measured widths and movements are in image pixels. The analysis does not convert pixel widths to wavelength resolution, remove the finite optical filter bandwidth, or establish a physical distance per pixel. [Filter mapping](../Config/analysis_config.py#L12), [analysis dispatch and metadata](../Scripts/analyze_test_folder.py#L776).
+The owner confirmed the filter part identities on 27 October 2026, including **FLH1064-3** for the 1064 nm position. The narrow bands were chosen as discrete samples across much of the owner-described 400–1700 nm camera range. They do not provide continuous coverage or verify performance between the sampled wavelengths. The test is used with variants of the **qtec Hypervision** camera family rather than one fixed reference camera. [Owner review](10-sources-and-maintenance.md#r1-owner-review-27-october-2026).
+
+The wavelength and FWHM numbers above are the analysis configuration's nominal values; no measured transmission curve is used by the code. Filter bandwidth in nm is metadata; the implemented measured widths and movements are in image pixels. The analysis does not convert pixel widths to wavelength resolution, remove the finite optical filter bandwidth, or establish a physical distance per pixel. For component descriptions and supplier specifications, see [hardware and connections](02-hardware-and-connections.md#filterwheel-filters-and-position-calibration). [Filter mapping](../Config/analysis_config.py#L12), [analysis dispatch and metadata](../Scripts/analyze_test_folder.py#L776).
 
 The primary quantities are spectral FWHM, spectral line position, spatial line spread function (LSF) Gaussian FWHM, spatial edge position, no-filter signal level, and dark-region level and spatial variation. Width describes the observed feature's sharpness; position tracks its movement. A change in these observables does not by itself identify which mechanical, optical, illumination, or sensor effect caused it.
 
@@ -39,6 +41,8 @@ Images are loaded through Pillow into floating-point arrays. The analysis expect
 | `noise_2` | `[200, 680)` | `[540, 620)` | Background statistics in the 1550 nm filtered image |
 
 Source: [spatial region](../Config/analysis_config.py#L41), [spectral regions](../Config/analysis_config.py#L79), [signal and noise regions](../Config/analysis_config.py#L98). These coordinates describe the supplied configuration, not a permanent alignment standard. Verify them on images after changes to camera framing, optical alignment, or sensor format. The crop helper does not validate boundaries; NumPy may silently truncate an out-of-bounds crop.
+
+The owner verifies the wheel positions before every long test and adjusts manual focus when the camera is changed. Record those setup checks with the run and inspect the analysis regions after a camera change. Focus or framing changes can affect width and position comparisons even when the analysis code is unchanged. The offline analyzer does not verify that these manual checks occurred. [Owner review](10-sources-and-maintenance.md#r1-owner-review-27-october-2026).
 
 ## Processing before measurement
 
@@ -183,6 +187,8 @@ Camera-internal readings, if recorded in the sweep summary, are flattened as `ca
 
 ## Repeat-cycle comparison
 
+The owner's purposes include statistical repeatability comparisons between camera units and comparisons during camera development. Within-unit repeated thermal cycles and differences between units or revisions are separate comparison questions. Identify the actual camera unit and revision for every test; the family name qtec Hypervision alone is insufficient. For repeatability estimates, compare physically comparable units and setup conditions. For an intentional development comparison, record the changed design and keep other conditions comparable. Individual outcomes remain outside this setup knowledge base. [Owner review](10-sources-and-maintenance.md#r1-owner-review-27-october-2026).
+
 `analyze_repeat_tests.py` compares absolute positions, not within-test deltas. For each `repeat_group_id`, `sweep_index`, and available position metric, it chooses the first nonmissing row sorted by `repeat_index` and then `test_folder`, and subtracts that value from each cycle:
 
 ```text
@@ -194,6 +200,8 @@ The four quantities are the three spectral quadratic peak positions and spatial 
 
 This aligns cycles by sweep index only. It does not interpolate onto equal temperature, elapsed time, heating/cooling branch, or thermal-equilibrium conditions; it does not register the images. Comparison at the same sweep index is therefore only a matched-condition comparison if the actual acquisition protocols and temperature histories support that interpretation.
 
+The current repeat script produces within-group position differences, and the viewers can overlay different units' metrics. They do not automatically pool units into a statistical population, separate variation within units from variation between units, correct camera-to-camera focus/alignment differences, or calculate a validated inter-unit repeatability statistic. The population definition, comparable setup conditions, and statistical treatment still need to be specified for that use. Record unit identity, hardware/design revision, manual focus adjustment, wheel verification, exposure/gain, ROI configuration, and the thermal protocol when preparing such a comparison.
+
 Current repeat-group inference normalizes group identity to `camera_id + YYYY-MM-DD`, preferring `repeat_group_start_date`, then a date extracted from an existing group ID, then a folder timestamp, then test date. Two genuinely separate sequences from the same camera on the same date can consequently be merged. Missing an explicit shared start date can split a multi-day sequence into daily groups. [Batch group inference](../Scripts/analyze_repeat_tests.py#L120), [updated viewer group inference](../Scripts/compare_tests_streamlit_updated.py#L162).
 
 The batch “cycle start” table selects the minimum sweep index across the entire combined dataset, then keeps rows at that index. It does not select the first available row separately for every cycle. Both combined CSV filenames currently receive the same combined table; `position_repeatability_by_sweep.csv` is not a separate statistical summary. [Cycle start selection](../Scripts/analyze_repeat_tests.py#L238), [CSV writing](../Scripts/analyze_repeat_tests.py#L344).
@@ -201,10 +209,10 @@ The batch “cycle start” table selects the minimum sweep index across the ent
 ## Review items before treating the method as validated
 
 1. Confirm the physical feature used for each ROI and that the regions remain valid through the expected image movement.
-2. Confirm why these three wavelengths, filter bandwidths, spatial samples, and percentile/fit settings were chosen.
+2. Confirm the rationale and validation for the spatial sample locations and percentile/fit settings; filter identities and the narrow-band sampling rationale are owner-confirmed above.
 3. Establish whether the noise ROIs are free of relevant signal and whether spatial scatter is the intended noise observable.
 4. Define the exposure policy and whether signal comparisons require normalization.
 5. Specify wavelength/spatial calibration, uncertainty estimation, saturation checks, fit-quality criteria, and acceptance limits if those are required for reporting.
-6. Define matched thermal states for repeatability and how independently started same-day sequences should be identified.
+6. Define matched thermal states, the unit/revision population and statistical treatment for between-unit comparisons, and how independently started same-day sequences should be identified.
 
 These are gaps in documented experimental validation, not proposed changes already implemented in the scripts. Operational commands, output names, and known viewer issues are documented in [Analysis tools and troubleshooting](07-analysis-tools-and-troubleshooting.md).

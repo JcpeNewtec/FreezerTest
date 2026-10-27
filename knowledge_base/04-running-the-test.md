@@ -1,6 +1,6 @@
 # Running the freezer test
 
-This chapter describes the behavior implemented in the supplied code snapshot. It is a review draft, not yet a verified physical work instruction. Hardware positioning, probe placement, preparation, calibration, electrical isolation, and environmental recovery procedures still need operator confirmation. Individual test results are outside this knowledge base.
+This chapter combines the reviewed source behavior with the owner's operating clarifications of 27 October 2026. Normal pre-cool uses **`probe_5` at 5 °C**. Filter positions are verified/calibrated before each run, and focus is adjusted manually to the target plane when the camera changes. Remaining apparatus details and environmental recovery procedures still need review. Individual test results are outside this knowledge base. [Owner review R1](10-sources-and-maintenance.md#r1-owner-review-27-october-2026).
 
 ## What a run does
 
@@ -18,18 +18,20 @@ Initialize folder and logger
   → Inter-repeat delay → next repeat
 ```
 
-The diagram represents the normal path when the relevant control features are enabled. Pre-cooling can be skipped, sweeps can fail, and stop requests or timeouts can interrupt the path.
+The diagram represents the normal path when the relevant control features are enabled. Normal pre-cool ends when `probe_5` reaches **5 °C or below**. Pre-cooling can be skipped by configuration, sweeps can fail, and stop requests or timeouts can interrupt the path. [Owner review R1](10-sources-and-maintenance.md#r1-owner-review-27-october-2026).
 
 ## Configuration to review before starting
 
-`Config/system_config.py` imports `Config.local_config` at the end using a wildcard import. Matching names in `local_config.py` therefore override the base settings. These are the **values in the supplied files**, not a universal test specification or a confirmed record of a previous run. [Source: override import](../Config/system_config.py#L169).
+`Config/system_config.py` imports `Config.local_config` at the end using a wildcard import. Matching names in `local_config.py` therefore override the base settings. Before a normal run, confirm `PRECOOL_SENSOR_NAME="probe_5"` and `PRECOOL_TARGET_C=5.0`. [Source: override import](../Config/system_config.py#L169), [owner review R1](10-sources-and-maintenance.md#r1-owner-review-27-october-2026).
 
-| Setting | Base setting | Effective copied local setting | Meaning |
+The table below preserves the **historical copied profile** for traceability. Its **12 °C pre-cool threshold was a deliberate shorter recent trial**. It is not the normal 5 °C procedure, and the original snapshot is retained as evidence rather than silently rewritten. Review all run-specific settings before acquisition. [Historical snapshot](reference/local_config_snapshot.txt), [owner review R1](10-sources-and-maintenance.md#r1-owner-review-27-october-2026).
+
+| Setting | Original base setting | Historical copied local setting | Meaning |
 |---|---|---|---|
 | `LOCAL_DATA_ROOT` | Required from local configuration | `/home/henrik/Documents/FreezerTest_Results` | Result folder on the acquisition host; verify that it exists/is writable on the actual host |
 | `PRECOOL_BEFORE_TEST_ENABLED` | `True` | `True` | Run pre-cool before each repeat |
 | `PRECOOL_SENSOR_NAME` | `probe_2` | `probe_5` | Probe used to decide pre-cool completion |
-| `PRECOOL_TARGET_C` | −5 °C | 12 °C | Pre-cool ends when selected reading is at or below target |
+| `PRECOOL_TARGET_C` | −5 °C | 12 °C | Shorter trial value; normal pre-cool is `probe_5` ≤5 °C |
 | `PRECOOL_TIMEOUT_HOURS` | 4 h | 7 h | Maximum pre-cool polling duration, checked at loop boundaries |
 | `PRECOOL_POLL_INTERVAL_S` | 5 s | 5 s | Pre-cool decision polling interval |
 | `PRECOOL_SETTLE_AFTER_FREEZER_OFF_S` | 60 s | 60 s | Fixed wait after switching freezer off |
@@ -49,9 +51,17 @@ The diagram represents the normal path when the relevant control features are en
 
 Sources: [base pre-cool/repeats](../Config/system_config.py#L62), [base end/cadence](../Config/system_config.py#L119), [local overrides](reference/local_config_snapshot.txt#L5), [local pre-cool/stream](reference/local_config_snapshot.txt#L27), [local repeats](reference/local_config_snapshot.txt#L46).
 
-Also check camera identity, operator, notes, filter positions, and exposures. The current local filter positions are −51, −251, −451, and −651 controller position units, with requested exposure controls 3000, 15000, 8000, and 15000 respectively. The code passes these exposure values to `exposure_time_absolute`; the physical unit must be confirmed from the camera/driver documentation. [Sources: local filter and exposure settings](reference/local_config_snapshot.txt#L52), [capture control](../Camera_scripts/camera_control.py#L50).
+Also check camera identity, operator, notes, filter positions, and exposures. The copied profile's filter positions are −51, −251, −451, and −651 controller position units, with requested exposure controls 3000, 15000, 8000, and 15000 respectively. Positions must be verified/calibrated for each run; these numbers are not permanent alignment references. The code passes exposure values to `exposure_time_absolute`; the physical unit must be confirmed from the camera/driver documentation. [Sources: historical filter and exposure settings](reference/local_config_snapshot.txt#L52), [capture control](../Camera_scripts/camera_control.py#L50), [owner review R1](10-sources-and-maintenance.md#r1-owner-review-27-october-2026).
 
-**Unimplemented configuration intent:** the local file defines `PRECOOL_CAMERA_WARM_START_ENABLED`, a warm-start probe, and a 15 °C warm-start threshold. The supplied long-test runner does not import or use these settings. Its implemented path keeps the camera off during pre-cool and powers it on only after the pre-cool function returns. Do not assume warm-start is working because these names exist in the file. [Sources: intent in local configuration](reference/local_config_snapshot.txt#L18), [runner imports](../Scripts/run_long_test.py#L15), [camera off during pre-cool](../Scripts/run_long_test.py#L330), [camera on afterward](../Scripts/run_long_test.py#L559).
+## Operator preparation
+
+1. Identify the camera under test, including its family variant and individual unit. The setup supports Qtec Hypervision variants rather than one fixed reference camera. Keep the same-type unit comparison and evaluation of a camera change identifiable in the run context.
+2. **Whenever the camera is changed, manually focus it on the target plane.** Focus is an operator adjustment; the acquisition code does not perform autofocus.
+3. **Before every run, verify/calibrate the filter positions.** The owner reports that the motor's internal reference may drift. Hall homing supplies a home reference during managed sweeps, but does not replace this per-run optical-position verification.
+4. Use the calibration interface as needed, then ensure the reviewed positions are in the effective `FILTER_POSITIONS` configuration. `calibrated_filter_positions.json` is not loaded automatically by the test runner.
+5. Check the intended pre-cool threshold, camera identity/operator/notes, capture settings, storage path, and stop-file state before the preflight/acquisition sequence.
+
+The manual focus and per-run calibration requirements are owner-confirmed. Their detailed acceptance criteria and adjustment method still need to be recorded. [Owner review R1](10-sources-and-maintenance.md#r1-owner-review-27-october-2026), [calibration workflow](02-hardware-and-connections.md#calibration-workflow-supported-by-the-code), [calibration save](../Scripts/calibrate_filterwheel.py#L207), [runtime position use](../Scripts/run_single_sweep_remote.py#L314).
 
 ## Starting a run
 
@@ -81,7 +91,7 @@ Successful preflight does not verify optical alignment, correct filter identity,
 1. Start the MCC logger with a requested 1 s interval, before pre-cool and before measurement timing begins.
 2. Wait up to 60 s for a value from `PRECOOL_SENSOR_NAME`. This wait occurs even if pre-cooling will subsequently be skipped.
 3. When pre-cooling and freezer control are enabled, attempt lamp off and camera off, then freezer on. Errors while forcing lamp/camera off are printed and do not themselves stop pre-cooling.
-4. Poll the latest logger record until selected temperature ≤ target. This is one threshold crossing, **not a temperature stability window or soak hold**. If the probe is already at/below target, pre-cool may finish almost immediately after freezer-on.
+4. Poll the latest logger record until selected temperature ≤ target; normal settings are **`probe_5` ≤5 °C**. This is one threshold crossing, **not a temperature stability window or soak hold**. If the probe is already at/below target, pre-cool may finish almost immediately after freezer-on.
 5. Switch freezer off and wait the fixed settle duration.
 6. Power camera on when enabled, wait 45 s by default, then start keepalive if enabled. Failure to establish keepalive at measurement startup aborts the test.
 7. Only now set `measurement_start_time`, calculate the end deadline, and allow the first sweep immediately.
@@ -171,9 +181,9 @@ Capture failure can leave images on the camera because transfer/removal happens 
 
 ## Physical procedure still to confirm
 
-- How the enclosure, target, optics, filters, lamp, camera, thermocouples, and cabling are installed and checked before every run.
+- Detailed installation checks for the enclosure, target, optics, filters, lamp, camera, thermocouples, and cabling, plus acceptance criteria for manual focus and per-run filter-position verification/calibration.
 - Which physical point each probe measures, particularly `probe_5` used by the copied profile.
-- Whether the desired pre-cool target is a threshold, a soak condition, or a controlled thermal state; no soak/stability criterion is implemented.
+- Whether an additional soak/stability criterion is needed beyond the owner-confirmed normal `probe_5` threshold of 5 °C; none is implemented in the reviewed runner.
 - How the freezer warms during measurement, whether its own thermostat remains relevant, and acceptable ambient conditions.
 - The required compressor minimum-off behavior. `FREEZER_MIN_OFF_TIME_S=600` is used by the dedicated relay test script; the long-run `freezer_on()` path does not enforce that delay. [Sources: manual protection setting](../Config/system_config.py#L76), [relay-test wait](../Scripts/test_freezer_relay.py#L87), [direct output control](../Control/temperature_control.py#L116).
 - The required response to condensation, an out-of-range sensor, unavailable network, or a command that failed to switch an output. These procedures should come from the actual apparatus and operator experience.

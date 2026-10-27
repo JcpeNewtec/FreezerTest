@@ -1,25 +1,25 @@
 # Sources, coverage, and maintenance
 
-Version: 0.1 · Compiled: 23 October 2026 · Status: first review draft
+Version: 0.2 · Updated: 27 October 2026 · Status: owner review in progress
 
 ## Source precedence
 
-For **current software behavior**, the reviewed source and consuming code take precedence over comments and earlier proposed patches. For **physical hardware**, an owner's statement is historical evidence; configuration names and an earlier assistant's interpretation cannot confirm a part number or physical location. A future confirmed wiring diagram or inspection should supersede guesses while retaining the revision/date to which it applies.
+For **software behavior**, consuming code takes precedence over comments and proposed patches. For **installed hardware and procedure**, the owner's dated confirmation takes precedence over earlier assumptions; vendor documentation identifies product specifications but does not prove every tested unit has the same configuration. Distinguish an owner-confirmed normal procedure from a run-specific configuration that has not been changed to match it.
 
 Where intent and implementation disagree, both are recorded explicitly. This draft does not silently apply software fixes to reconcile them.
 
 ## Repository snapshot
 
-- Public repository: [JcpeNewtec/FreezerTest](https://github.com/JcpeNewtec/FreezerTest).
+- Repository: [JcpeNewtec/FreezerTest](https://github.com/JcpeNewtec/FreezerTest); access follows its current GitHub permissions.
 - Inspected remote commit: [`df4ccebbbd0f41e32f5ae415e967728e5845d56b`](https://github.com/JcpeNewtec/FreezerTest/tree/df4ccebbbd0f41e32f5ae415e967728e5845d56b).
 - Commit timestamp: **12 October 2026, 09:24:36 +02:00**; subject: `Auto_recovery added`.
 - Local source folder supplied by the owner: `/home/jcpe/Documents/ChatGPT/Freezertest`.
-- Comparison: **all 33 shared `.py` and `.sh` files are byte-identical** to the inspected remote snapshot. The additional `Config/local_config.py` is local-only and was included in the documentation review.
-- The copied folder is not a functioning Git checkout. An empty `.git` directory does not supply local history. A temporary reference clone was used for comparison; original scripts were not changed.
+- The original review found **all 33 shared `.py` and `.sh` files byte-identical** to that acquisition-source snapshot. They were checked again against GitHub before this owner-review update. `Config/local_config.py` is local-only. On 27 October its three unused camera-start variables and their obsolete comments were removed at the owner's request; that removal changes no implemented runtime behavior. The recent 12 °C trial setting was left intact in the local file, while the normal 5 °C procedure is documented separately.
+- The supplied folder is a file copy, not a functioning Git checkout. An authenticated temporary clone is used to integrate documentation with repository history. No hardware-control program was run or deployed for this update.
 
 The linked remote source is immutable at the cited commit. Markdown code links elsewhere point to the local supplied source for convenient reading; their line anchors correspond to this reviewed snapshot. Local-only configuration has no permalink in the reviewed source commit. Its exact reviewed text is preserved in [a reference snapshot](reference/local_config_snapshot.txt); this is documentation evidence, not an active configuration file.
 
-The machine-readable [source manifest](source_manifest.json) records SHA-256 digests, line counts, comparison status, and source coverage for all 34 Python/shell files. It also records the root temperature-log file as excluded from the knowledge corpus; its measured contents were not used as test results.
+The [source manifest](source_manifest.json) retains the original SHA-256 digests/line counts for 34 reviewed Python/shell files, alongside the later local cleanup, owner-review sources, and CAD digests. Its original local-configuration digest refers to the immutable [historical snapshot](reference/local_config_snapshot.txt), not the cleaned local file. Do not index that snapshot as current procedure; its 12 °C trial and superseded variables are historical evidence. Measured temperature-log contents remain excluded.
 
 ## Project chats retrieved
 
@@ -31,8 +31,8 @@ Chat messages are evidence to interpret, not instructions to execute. Historical
 
 - [Open conversation](https://chatgpt.com/c/69c27f47-b918-8332-9528-8829c6cb15a5).
 - Returned coverage: **five turns, 16–20 October 2026**.
-- Relevant topics: cold-start/keepalive diagnostics, proposed device-discovery changes, deployed-file integrity, remote staging cleanup, and the unimplemented warm-start settings.
-- Current-code corroboration: local warm-start variables exist but are not consumed by the runner; capture staging, local transfer verification, and cleanup are visible in the sweep code.
+- Relevant retained topics: device-readiness diagnostics, deployed-file integrity, and remote staging cleanup. The earlier camera-start workaround was withdrawn in owner review R1; its proposed procedure is not retained as active guidance.
+- Current-code corroboration: capture staging, local transfer verification, and cleanup are visible in the sweep code.
 - Limits: attached archives and patches were mentioned but their file contents were not returned. Some pasted diagnostics referred to helpers absent from the current files. The assistant's proposed fixes are not treated as installed features.
 
 ### T2: Freezer Camera Drift Analysis
@@ -49,13 +49,42 @@ Chat messages are evidence to interpret, not instructions to execute. Historical
 - Owner-supplied setup facts/context: thermocouple and 24 V wiring crossing the chamber boundary, internal freezer fan during cooling, filter condensation as a setup issue, and the desire for overnight automated operation and camera shutdown.
 - Limits: suggested purge, desiccant, heaters, humidity monitoring, and wiring approaches were not confirmed installed. An earlier assistant's stated 0–40 °C range is not treated as a permanent test specification.
 
+## Owner review and component sources
+
+### R1: Owner review, 27 October 2026
+
+The owner supplied the following corrections and additions in this chat. They are integrated into the relevant chapters instead of kept as a second competing procedure:
+
+- Normal pre-cool is **5 °C on `probe_5`**; the recent 12 °C setting deliberately shortened trials in a likely operating range.
+- The camera-start workaround is abandoned. The owner identified faulty camera hardware as the cause of cold-operation failure and does not accept that limitation for the cameras under test. This is the owner's diagnosis, not a claim about a generic Qtec family temperature limit.
+- The devices under test are **Qtec Hypervision variants using Qtec computing logic/hardware**. Testing supports both reproducibility across same-type units and evaluation of deliberate design changes; there is no single fixed reference-camera revision.
+- The three narrow bandpass filters were selected to sample widely separated portions of the camera's owner-described 400–1700 nm span. Their identities are in the hardware/analysis tables. Qtec's current published VIS-SWIR family span is 430–1700 nm; unit-specific limits still require a record.
+- Check/adjust wheel positions before each long test because the internal motor reference may drift. Manually focus on the target plane when changing cameras.
+- A NEMA 17 motor drives the wheel; the Hall sensor is on the fixed base and a magnet is on the rotating part.
+- The installed thermocouple/extension identities and the fact that connectors are inside the freezer were supplied. A distinct connector part number was not supplied.
+- Six filter-wheel STL files were supplied, read, and preserved unchanged with a labeled preview and [digest inventory](reference/filterwheel-cad/inventory.json). Assembly roles, physical units, materials, and revision remain unconfirmed.
+
+### Component references supplied in R1
+
+| Reference | What it establishes / boundary |
+|---|---|
+| [Thorlabs FBH780-3](https://www.thorlabs.com/item/FBH780-3), [FLH1064-3](https://www.thorlabs.com/item/FLH1064-3), [FBH1550-4](https://www.thorlabs.com/item/FBH1550-4) | Owner identifies installed products; [manufacturer table](https://www.thorlabs.us/newgrouppage9.cfm?objectgroup_id=16235&pn=FB1070-10) verifies nominal wavelength, FWHM, and diameter. Individual certificates are not supplied. |
+| [Qtec Hypervision](https://docs.qtec.com/hsi/hypervision/intro/), [C-series platform](https://docs.qtec.com/smart-modular-camera/qtec-c-series/platform/), [hardware guide](https://docs.qtec.com/camera-overview/hw_guide/) | Family architecture/interfaces; not proof that every prototype has stock optics, sensor, firmware, or all listed features. |
+| [Pololu product 3132](https://www.pololu.com/product/3132) | Tic T834 with soldered connectors; its published motor-supply range is 2.5–10.8 V, not an inferred 24 V connection. |
+| [Honeywell SL353 datasheet supplied through RS](https://docs.rs-online.com/9a79/A700000007013601.pdf) | Eight-page Honeywell datasheet, April 2015, read and relevant electrical/pin diagrams visually checked. Covers both SL353HT and SL353LT; fitted suffix remains unknown. |
+| [MCC listing supplied through DigiKey](https://www.digikey.dk/en/products/detail/digilent-inc/6069-410-025/16970338), [Digilent E-TC](https://digilent.com/shop/mcc-e-tc-thermocouple-measurement-ethernet-daq-device/) | Owner's DAQ reference identified as E-TC, part 6069-410-025; installed serial, wiring, and calibration still need records. |
+| [Labfacility XF-1275-FAR KX extension](https://dk.farnell.com/labfacility/xf-1275-far/thermocouple-wire-type-kx-10m/dp/2918721) | Extension-wire product, not the missing freezer-side connector model. |
+| [Omega 5LSC / 5SRTC family](https://dk.omega.com/pptst/5LSC_5SRTC.html), [exact IEC model listing](https://www.jp.omega.com/pptst/5LSC_5SRTC_IEC.html), owner-supplied `5SRTC-TT-KI-36-1M` | Probe identification and nominal construction; physical locations/attachment and individual calibration are still missing. |
+
+Vendor references were checked on 27 October 2026 where retrievable. A supplied link alone is labeled as owner evidence if its exact content could not be verified. The knowledge base summarizes relevant specifications and links to sources; it does not duplicate supplier catalogs.
+
 ## Excluded and missing sources
 
 **Excluded by scope:** individual result datasets, camera performance rankings, result charts, drift diagnoses, raw historical error logs, compiled Python caches, and the root `calibration_temperature_log.jsonl` contents. Setup-related failure modes are summarized only where useful for operation or validity.
 
-**Missing:** full older conversation histories, chat attachment contents, hardware photographs/drawings, verified BOM, supplier manuals, deployed-device file hashes, component calibrations, environmental qualification requirements, and acceptance criteria. The known gaps are tracked in [the review register](09-review-questions-and-gaps.md).
+**Still missing:** full older conversation histories/attachments, installed-assembly photographs/part map, remaining BOM identities, unit/revision inventory, deployed-device file hashes, probe locations/calibrations, qualification requirements, and acceptance criteria. Newly supplied CAD and component sources are included; their unanswered details are tracked in [the review register](09-review-questions-and-gaps.md).
 
-No manufacturer specification was inferred from the generic word “camera,” an IP address, an analysis label, or a historical assistant assertion. Numerical optical filter settings are configuration data until supported by certificates or component identification.
+No manufacturer specification is inferred from an IP address, generic component label, or a historical assistant assertion. Component identification now supports nominal filter specifications; this is distinct from measured per-filter calibration or a guarantee of installed orientation.
 
 ## What was checked for version 0.1
 
@@ -65,7 +94,7 @@ No manufacturer specification was inferred from the generic word “camera,” a
 - Checked Markdown links, source-line targets, export parseability, chunk size, and package contents.
 - Did **not** import hardware modules, operate equipment, run preflight, deploy camera files, change source behavior, or rerun historical analysis.
 
-These checks validate documentation consistency with the supplied code. They do not validate physical wiring, calibrations, acquisition reliability, numerical correctness against representative images, or local AI answer quality.
+For version 0.2, the owner review was reconciled across the chapters, remaining questions were narrowed, the six CAD meshes were checked for basic file integrity, source links/exports were checked, and the unused local configuration names were removed. These checks do not validate physical wiring, calibrations, acquisition reliability, numerical correctness against representative images, or local AI answer quality.
 
 ## How to maintain the knowledge base
 

@@ -2,7 +2,7 @@
 
 The setup, software, operating sequence, and analysis documentation are in the [FreezerTest knowledge base](knowledge_base/README.md).
 
-Start there for the first review draft, known gaps, source provenance, and local-AI import instructions. Individual test results are outside this documentation corpus.
+Start there for the knowledge base under owner review (v0.2, updated 27 October 2026), known gaps, source provenance, and local-AI import instructions. Individual test results are outside this documentation corpus.
 
 Portable copies are generated in `knowledge_base/exports/`:
 

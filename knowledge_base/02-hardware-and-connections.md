@@ -1,6 +1,6 @@
 # Hardware and connections
 
-Status: first version, assembled from the supplied source code and retrieved project-chat context on 23 October 2026. This chapter distinguishes the interfaces the software expects from historical setup descriptions. It is not yet an as-built wiring drawing or a confirmed bill of materials. Component model numbers, physical probe locations, electrical ratings, and optical geometry require owner review.
+Status: owner review updated 27 October 2026; original source snapshot 23 October 2026. Component identities and arrangement supplied in the [27 October owner review](10-sources-and-maintenance.md#r1-owner-review-27-october-2026) are distinguished below from software settings and generic manufacturer specifications. This is not yet an as-built wiring drawing. Physical probe locations, remaining part numbers, actual supply wiring and optical geometry still require review.
 
 ## System arrangement
 
@@ -33,21 +33,29 @@ The diagram is a logical interface map. It does not specify load-side power wiri
 
 ## Component inventory and evidence
 
-| Component | What the code establishes | Still to confirm physically |
+| Component | Established identity, owner description or code interface | Still to confirm physically |
 |---|---|---|
 | Host PC | Python programs coordinate tests, store data, run analysis and Streamlit comparison views. | Machine identity, operating-system version, interface configuration, environment/package versions, backup location. |
-| Camera and embedded computer | SSH control; `/dev/video4`; V4L2 controls; GStreamer capture; internal sensor queries. Config comments refer to Qtec firmware/driver behavior. | Manufacturer and exact model, sensor, serial number, firmware and driver versions, optics, TEC hardware and setpoint. “Qtec” in a comment is not a confirmed model identification. |
-| MCC temperature and digital-I/O unit | Ethernet access through `uldaq`; eight configured thermocouple channels and `AUXPORT0` bit I/O. | Exact model and serial number, terminal map, common/reference connections, channel capabilities and calibration status. |
-| Thermocouples | Channels 0–7 configured as type K; channels 0–4 enabled. | Probe manufacturer/type details, attachment methods, positions, reference measurements and uncertainty. |
-| Tic controller and stepper motor | Controlled with `ticcmd`; programmable current, position, motion settings and safe-start. | Exact controller and motor models, serial number, supply, driver limits, wiring, gear ratio and mechanics. |
-| Filterwheel and Hall home sensor | Four configured measurement positions; Hall-active level 0; homing finds an edge and defines motor position zero. | Wheel design/capacity, magnet placement, sensor part number, pull-up arrangement, physical datum and optical alignment. |
-| Filters | Analysis labels an open position and band-pass filters at 780, 1064 and 1550 nm. | Part numbers, measured transmission curves, tolerances, coating/orientation, mounting and certificates. |
+| Camera and embedded computer | Owner identifies the Qtec Hypervision family, with variations tested rather than one fixed hardware revision. SSH control, `/dev/video4`, V4L2 and GStreamer are implemented. | Per-test camera/revision identity, sensor, serial number, firmware/driver versions, optics, TEC hardware and setpoint. |
+| MCC temperature and digital-I/O unit | Owner supplies Digilent/MCC **E-TC**, part **6069-410-025**. Ethernet `uldaq` access; eight configured thermocouple channels and `AUXPORT0` bit I/O. | Serial number, terminal map, common/reference connections and calibration status. |
+| Thermocouples and extension | Owner supplies **Omega 5SRTC-TT-KI-36-1M** thermocouples and **Labfacility XF-1275-FAR** KX extension wire. Channels 0–4 enabled as type K. | Attachment methods, physical positions, actual extension lengths, connector counterpart model, reference measurements and uncertainty. |
+| Tic controller and stepper motor | Owner identifies **Pololu 3132, Tic T834**, and a **NEMA 17** motor. Controlled with `ticcmd`. | Exact motor part number/electrical rating, serials, actual controller supply, winding wiring and mechanical drive ratio. NEMA 17 does not identify a specific motor model. |
+| Filterwheel and Hall home sensor | Owner confirms sensor on the fixed base and magnet on the rotating part; supplied datasheet identifies Honeywell **SL353 series**, with HT/LT variants. Four configured measurement positions and active-low Hall logic. Six CAD meshes are preserved below. | Exact HT/LT suffix, fitted supply/interface circuit, physical datum, assembled dimensions and optical alignment. |
+| Filters | Owner identifies **Thorlabs FBH780-3**, **FLH1064-3** and **FBH1550-4**, plus the open position. Nominal wavelengths/widths agree with analysis configuration. | Per-unit transmission data/certificates, orientation, installed mounting and serial/lot records. |
 | Illumination | Lamp controlled by DIO bit 0; software waits 2 s before sweep capture. | Lamp/source type, spectrum, power supply, warm-up stability, positioning, optical path and switching interface. |
 | Freezer and contactor | DIO bit 3 controls freezer enable; automated pre-cool followed by freezer-off measurement. | Freezer model, compressor/controller details, contactor and coil ratings, temperature limits and physical wiring. |
 | Camera power relay | DIO bit 2 controls camera power; 45 s boot wait configured. | Relay specification, load-side voltage/current, power-supply topology, switching behavior and actual boot requirement. |
 | Camera mounting, grating and target | Analysis expects spectral lines and a central dark vertical line; local notes mention a “PC Grating Holder.” User chat describes an Offner arrangement and the materials listed below. | Complete optical/mechanical drawing, grating properties, target description, distances, orientation and confirmation that the historical build is still current. |
 
 Sources: [camera defaults](../Camera_scripts/camera_config.py#L2), [DAQ interface](../Control/temperature_control.py#L12), [temperature configuration](../Config/temperature_config.py#L8), [system motion and I/O settings](../Config/system_config.py#L1), [filter identities](../Config/analysis_config.py#L12), [target analysis setup](../Config/analysis_config.py#L41), [local metadata](reference/local_config_snapshot.txt#L66).
+
+### Manufacturer specifications and their limits
+
+The owner's camera description is approximately **400–1700 nm**. Qtec's public Hypervision documentation lists its VIS-SWIR version as **430–1700 nm**, describes an Offner spectrograph, and places it on a Linux computer platform. Preserve these as separate owner and public-product descriptions: the public specifications do not establish the exact range, detector or revision of every camera tested here. Record the camera identity for each run, and perform the owner's stated manual focus adjustment when changing camera. [Qtec Hypervision documentation](https://docs.qtec.com/hsi/hypervision/intro/), [owner review](10-sources-and-maintenance.md#r1-owner-review-27-october-2026).
+
+Digilent identifies **6069-410-025** as **MCC E-TC**, with eight thermocouple inputs, 24-bit conversion, maximum 4 samples/s/channel and eight digital I/O. These are device capabilities, not the project's logging cadence or whole-chain accuracy. The code's logger requests a nominal 1 s interval. [Digilent E-TC product page](https://digilent.com/shop/mcc-e-tc-thermocouple-measurement-ethernet-daq-device/), [logger interval](../Control/temperature_logger.py#L21).
+
+Pololu identifies item **3132** as the **Tic T834 with soldered connectors**, using a DRV8834 driver. Its manufacturer supply range is **2.5–10.8 V**, with approximately **1.5 A continuous per phase** without additional cooling. The actual installed supply voltage remains unrecorded. The separate 24 V camera/contactor comment below does not establish a supply connection to this controller. [Pololu 3132](https://www.pololu.com/product/3132).
 
 ## Optical and mechanical setup reported in project chats
 
@@ -91,6 +99,10 @@ A comment in the calibration program states that the freezer contactor uses the 
 
 ## Thermocouple channels
 
+The owner identifies the thermocouples as **Omega 5SRTC-TT-KI-36-1M**. Omega lists that exact model as type K, **36 AWG / approximately 0.13 mm wire diameter**, **PFA insulation**, and **1 m lead length**; the 5SRTC style includes a miniature thermocouple plug and strain relief. These product details do not establish the physical placement or calibration of any particular probe. [Omega IEC series and exact model listing](https://www.jp.omega.com/pptst/5LSC_5SRTC_IEC.html).
+
+The owner confirms that the thermocouple connectors are **inside the freezer**, extended outside with **Labfacility XF-1275-FAR** KX wire, [Farnell order reference 2918721](https://dk.farnell.com/labfacility/xf-1275-far/thermocouple-wire-type-kx-10m/dp/2918721). This identifies extension wire, not a separate connector product. The exact mating/extension connector model has not yet been supplied; do not infer it from the cable reference or the probe's included plug. Actual installed extension lengths and termination details remain to be recorded. [Owner review](10-sources-and-maintenance.md#r1-owner-review-27-october-2026).
+
 | MCC channel | Logical probe name | Thermocouple type | Enabled in supplied configuration | Physical placement |
 |---:|---|---|---|---|
 | 0 | `probe_1` | K | Yes | Unconfirmed |
@@ -104,22 +116,34 @@ A comment in the calibration program states that the freezer contactor uses the 
 
 Source: [channel map](../Config/temperature_config.py#L12). Probe names are generic identifiers. Do not label a probe “ambient,” “grating,” “camera housing,” or similar until its actual placement is confirmed.
 
+The owner reports **5 °C at probe 5** as the normal cold threshold and explains that **12 °C** was used recently to shorten testing. The archived local configuration contains 12 °C. These are protocol choices, not probe specifications or verified temperatures of the optics; retain the actual selected threshold with each test. [Owner review](10-sources-and-maintenance.md#r1-owner-review-27-october-2026), [configuration snapshot](reference/local_config_snapshot.txt#L27).
+
 At connection, the controller sets a thermocouple type for every entry, including disabled channels. During a read it skips disabled channels, asks the device for Celsius values, and records `ULException` errors per probe. It does not apply a project-specific offset or scale correction in this code. Factory/device calibration and cold-junction behavior must be documented from the actual MCC model and its setup rather than inferred here. [Type setup](../Control/temperature_control.py#L77), [temperature reading](../Control/temperature_control.py#L210).
 
 The default logger interval is 1 s, with a sleep after each reading cycle, so this is a nominal cadence rather than a guaranteed exact 1 Hz sample clock. [Logger defaults](../Control/temperature_logger.py#L21), [logger loop](../Control/temperature_logger.py#L79).
 
 ## Filterwheel, filters and position calibration
 
-The filter assignment is an analysis configuration, not an independently verified optical inventory. Widths below are the nominal `filter_fwhm_nm` values supplied to analysis; no vendor certificate is present in the supplied files. [Filter configuration](../Config/analysis_config.py#L12).
+The owner identifies the three installed filter models below. Their nominal center wavelengths and FWHM values agree with the [analysis configuration](../Config/analysis_config.py#L12) and Thorlabs' product descriptions; no individual filter transmission certificate has been supplied. The three narrow passbands sample separated wavelengths across the broad camera range. They do not provide continuous spectral coverage of that range. [Thorlabs filter table](https://www.thorlabs.us/newgrouppage9.cfm?objectgroup_id=16235&pn=FB1070-10), [owner review](10-sources-and-maintenance.md#r1-owner-review-27-october-2026).
 
-| Filter number | Analysis name and role | Nominal wavelength | Nominal filter FWHM | Current local position | Base-file position | Capture exposure control value |
-|---:|---|---:|---:|---:|---:|---:|
-| 1 | `no_filter`, spatial/open | — | — | -51 | -57 | 3000 |
-| 2 | `bp_780`, spectral | 780 nm | 3 nm | -251 | -257 | 15000 |
-| 3 | `bp_1064`, spectral | 1064 nm | 3 nm | -451 | -457 | 8000 |
-| 4 | `bp_1550`, spectral | 1550 nm | 4 nm | -651 | -657 | 15000 |
+| Filter number | Analysis name and role | Owner-supplied model | Nominal wavelength | Nominal filter FWHM | Archived local position | Base-file position | Capture exposure control value |
+|---:|---|---|---:|---:|---:|---:|---:|
+| 1 | `no_filter`, spatial/open | Open position | — | — | -51 | -57 | 3000 |
+| 2 | `bp_780`, spectral | [Thorlabs FBH780-3](https://www.thorlabs.com/item/FBH780-3) | 780 nm | 3 nm | -251 | -257 | 15000 |
+| 3 | `bp_1064`, spectral | [Thorlabs FLH1064-3](https://www.thorlabs.com/item/FLH1064-3) | 1064 nm | 3 nm | -451 | -457 | 8000 |
+| 4 | `bp_1550`, spectral | [Thorlabs FBH1550-4](https://www.thorlabs.com/item/FBH1550-4) | 1550 nm | 4 nm | -651 | -657 | 15000 |
 
-The local positions override the base positions. Values are Tic position units under the configured step mode, not verified angles or absolute physical positions. Adjacent configured slots are separated by 200 position units; no steps-per-revolution or gear ratio is established in the source. Exposure values are passed to the camera driver's `exposure_time_absolute` control. Their time unit and valid range require camera/driver verification; do not convert them into milliseconds using a generic camera convention. [Base positions and motion settings](../Config/system_config.py#L3), [local positions and exposures](reference/local_config_snapshot.txt#L52), [exposure command](../Camera_scripts/camera_control.py#L50).
+The local positions override the base positions. The owner reports checking filterwheel positions for each long run; the archived numbers are not a permanent alignment guarantee. Values are Tic position units under the configured step mode, not verified angles or absolute physical positions. Adjacent configured slots are separated by 200 position units; no steps-per-revolution or gear ratio is established in the source. Exposure values are passed to the camera driver's `exposure_time_absolute` control. Their time unit and valid range require camera/driver verification; do not convert them into milliseconds using a generic camera convention. [Base positions and motion settings](../Config/system_config.py#L3), [local positions and exposures](reference/local_config_snapshot.txt#L52), [exposure command](../Camera_scripts/camera_control.py#L50), [owner review](10-sources-and-maintenance.md#r1-owner-review-27-october-2026).
+
+### Mechanical reference and Hall arrangement
+
+The owner confirms that the **Hall sensor is attached to the fixed base** and the **magnet is on the rotating part**. The supplied datasheet is Honeywell's **SL353 series micropower omnipolar digital Hall sensor**, covering **SL353HT** and **SL353LT**. It specifies a **2.2–5.5 V** operating supply, **−40 to +85 °C** operation, and a **push-pull output** that goes low with an activating magnetic field and high when it is removed. That logic agrees with the configured active-low read. Either magnetic pole can activate the device. [Honeywell datasheet supplied via RS, pp. 2–4](https://docs.rs-online.com/9a79/A700000007013601.pdf), [Hall configuration](../Config/system_config.py#L25).
+
+The exact fitted **HT/LT suffix remains unknown**: the nominal sampling periods differ (45 microseconds for HT versus 45 milliseconds for LT at the datasheet's nominal conditions). Record the actual suffix and interface wiring when documenting the homing response; no sensor-response/repeatability validation is inferred from the family datasheet. Its IC pin diagram is not an as-built pin map for the rig.
+
+Six supplied STL files are preserved in the [filterwheel CAD inventory](reference/filterwheel-cad/README.md), with a preview below. The meshes provide mechanical reference; their assembled roles, exact current-build correspondence and dimensions should be established from the inventory and owner review rather than guessed from filenames or this preview.
+
+![Independent views of the six supplied filterwheel CAD meshes](assets/filterwheel-cad-overview.png)
 
 Current coordinator settings are step mode `8`, current limit `1500 mA`, max speed `4000000`, starting speed `0`, max acceleration/deceleration `40000`, position tolerance `5`, settle time `0.2 s`, and move timeout `10 s`. Speed and acceleration numbers are passed directly to `ticcmd`; this knowledge base does not convert their units without the actual controller documentation. Class constructor defaults differ from the coordinator configuration, so use the passed configuration when interpreting production behavior. [Configured values](../Config/system_config.py#L10), [driver constructor](../Control/filterwheel_control.py#L13), [coordinator passes settings](../Scripts/run_single_sweep_remote.py#L241).
 
@@ -156,10 +180,11 @@ The camera-side code states that this camera's sensor-temperature control update
 ## Hardware information to add during review
 
 1. Annotated overview photograph, optical-path sketch and a dimensioned mounting arrangement.
-2. Exact component models/serial numbers and relevant manuals for camera, MCC, stepper controller/motor, freezer, lamp, Hall sensor, power supplies, relays and contactor.
+2. Per-test camera/revision and serial records; MCC/controller serials; exact NEMA 17 motor model and SL353HT/LT suffix; remaining freezer, lamp, supply, relay and contactor identities/manuals.
 3. Wiring drawing with connector/terminal numbers, logic references, supply sharing and load-side switching.
 4. Photograph and location description for each `probe_1` through `probe_5`, including what surface or medium it measures and how it is attached.
-5. Filter datasheets/transmission certificates; target description; grating, lens and holder details.
+5. Individual filter transmission certificates/lot records; target description; grating, lens and holder details.
 6. Temperature calibration/uncertainty evidence, wheel alignment/repeatability check, illumination stabilization evidence and camera exposure-control units.
 7. Confirmed operating temperature bounds and the actual camera/TEC initialization and control behavior.
 8. Confirm the historical Offner/material/adhesive/fan description against the present build; record humidity/condensation monitoring and any actually installed mitigation.
+9. Separate connector part numbers and installed extension lengths for the identified Omega probes and Labfacility KX extension wire.

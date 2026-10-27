@@ -10,8 +10,9 @@ import zipfile
 from pathlib import Path
 
 KB = Path(__file__).resolve().parent
-VERSION = "0.1"
-DATE = "2026-10-23"
+VERSION = "0.2"
+DATE = "2026-10-27"
+REVIEW_STATUS = "owner_review_in_progress"
 COMMIT = "df4ccebbbd0f41e32f5ae415e967728e5845d56b"
 REPO = "https://github.com/JcpeNewtec/FreezerTest"
 MAX_CHUNK_CHARS = 4500
@@ -78,7 +79,7 @@ def build():
     documents = []
     chunks = []
     combined = ["# FreezerTest knowledge base — portable edition\n",
-                f"Version {VERSION} · First review draft · {DATE}\n",
+                f"Version {VERSION} · Owner review in progress · {DATE}\n",
                 "Generated from the canonical Markdown pages. Import this file OR another export, not both.\n"]
 
     for path in paths:
@@ -88,11 +89,11 @@ def build():
         base = {"document_id": document_id, "title": title,
                 "source_path": "knowledge_base/" + path.name,
                 "kb_version": VERSION, "compiled_date": DATE,
-                "review_status": "first_review_draft", "repository_commit": COMMIT}
+                "review_status": REVIEW_STATUS, "repository_commit": COMMIT}
         documents.append({**base, "id": document_id, "sha256": digest(content), "text": content})
 
         for section_index, (heading, body) in enumerate(sections(content), 1):
-            prefix = f"Document: {title}\nSection: {heading}\nSource: knowledge_base/{path.name}\nStatus: first review draft; version {VERSION}; compiled {DATE}\n\n"
+            prefix = f"Document: {title}\nSection: {heading}\nSource: knowledge_base/{path.name}\nStatus: owner review in progress; version {VERSION}; compiled {DATE}\n\n"
             for part_index, part in enumerate(bounded_parts(body, MAX_CHUNK_CHARS - len(prefix)), 1):
                 text = prefix + part
                 chunks.append({**base, "id": f"{document_id}-s{section_index:03d}-p{part_index:03d}",
@@ -111,7 +112,7 @@ def build():
                 if repo_path != "Config/local_config.py":
                     return f"[{label}]({REPO}/blob/{COMMIT}/{repo_path}" + ("#" + fragment if fragment else "") + ")"
                 return f"{label} (`{repo_path}" + ("#" + fragment if fragment else "") + "`; local-only source)"
-            if filename.startswith("reference/"):
+            if filename.startswith(("reference/", "assets/")):
                 return f"[{label}](../{target})"
             if filename == "source_manifest.json":
                 return f"[{label}](../source_manifest.json)"
@@ -140,9 +141,10 @@ def build():
                  "documents": len(documents), "chunks": len(chunks), "max_chunk_characters": MAX_CHUNK_CHARS,
                  "inputs": [{"path": r["source_path"], "sha256": r["sha256"]} for r in documents]}
     (exports / "export_manifest.json").write_text(json.dumps(inventory, indent=2) + "\n", encoding="utf-8")
-    package = exports / "FreezerTest_Knowledge_Base_v0.1.zip"
+    package = exports / f"FreezerTest_Knowledge_Base_v{VERSION}.zip"
     with zipfile.ZipFile(package, "w", zipfile.ZIP_DEFLATED) as z:
-        for path in paths + [KB / "source_manifest.json", KB / "build_exports.py"] + sorted((KB / "reference").glob("*.txt")):
+        evidence = [p for folder in ("reference", "assets") for p in sorted((KB / folder).rglob("*")) if p.is_file()]
+        for path in paths + [KB / "source_manifest.json", KB / "build_exports.py"] + evidence:
             z.write(path, "knowledge_base/" + path.relative_to(KB).as_posix())
         for name in ["FreezerTest_Knowledge_Base.md", "documents.jsonl", "chunks.jsonl", "export_manifest.json"]:
             z.write(exports / name, "knowledge_base/exports/" + name)

@@ -1,8 +1,8 @@
 # Software and configuration
 
-Status: first version, based on static inspection of the supplied files on 23 October 2026. No hardware-control program was executed to build this documentation. Values below describe the copied source snapshot, not a guarantee of what is deployed on the test PC or camera.
+Status: source inspected on 23 October 2026; normal procedure clarified by the owner on 27 October 2026. No hardware-control program was executed to build this documentation. The owner-confirmed normal settings and the earlier copied source profile are distinguished below. [Owner review R1](10-sources-and-maintenance.md#r1-owner-review-27-october-2026).
 
-The 33 shared Python/shell files in the supplied local copy were verified against public repository commit `df4ccebbbd0f41e32f5ae415e967728e5845d56b` dated 12 October 2026 and matched byte for byte. `Config/local_config.py` is an additional local file, so its effective settings must be retained when reproducing this copy's behavior. See [source provenance and maintenance](10-sources-and-maintenance.md) for verification details.
+The 33 shared Python/shell files in the supplied local copy were verified against repository commit `df4ccebbbd0f41e32f5ae415e967728e5845d56b` dated 12 October 2026 and matched byte for byte. The additional `Config/local_config.py` was preserved as a [historical snapshot](reference/local_config_snapshot.txt). Its 12 °C pre-cool setting was a deliberate shorter trial; normal pre-cool uses `probe_5` at **5 °C**. Reproducing that old profile and preparing a normal run are different configuration choices. See [source provenance and maintenance](10-sources-and-maintenance.md) and [owner review R1](10-sources-and-maintenance.md#r1-owner-review-27-october-2026).
 
 ## Software layers
 
@@ -11,7 +11,7 @@ The host PC owns sequencing, MCC I/O, wheel movement, temperature logging, data 
 | File or group | Responsibility |
 |---|---|
 | `Config/system_config.py` | Base host configuration: motion, DIO, network endpoints, control features, test timing, recovery and metadata; imports local overrides at the end. |
-| `Config/local_config.py` | Site/run overrides currently supplied with this copy. It changes the actual test protocol substantially and defines the required local results path. |
+| `Config/local_config.py` | Site/run overrides, including the required local results path. The original copied profile is preserved as historical evidence; its trial settings are not the normal protocol. |
 | `Config/temperature_config.py` | MCC network endpoint and thermocouple channel definitions; imported directly by the temperature controller. |
 | `Config/analysis_config.py` | Filter identities, nominal wavelengths/widths, image ROIs and analysis options; imported directly by analysis. |
 | `Control/temperature_control.py` | MCC connection, thermocouple readings, Hall input, lamp/freezer/camera output switching. |
@@ -46,26 +46,28 @@ Important boundaries:
 
 Sources: [temperature import](../Control/temperature_control.py#L23), [analysis import](../Scripts/analyze_test_folder.py#L13), [camera-side import](../Camera_scripts/capture_remote.py#L4), [explicit exposure transfer](../Scripts/run_single_sweep_remote.py#L319), [local results definition](reference/local_config_snapshot.txt#L5), [host imports](../Scripts/run_long_test.py#L15).
 
-## Current effective acquisition settings
+## Normal pre-cool and the historical copied profile
 
-“Base” means the value before local overrides. “Effective” means the supplied local snapshot after override. These are configuration values and limits, not measured test results or accepted protocol specifications. [Base timing and pre-cool settings](../Config/system_config.py#L62), [base endpoint settings](../Config/system_config.py#L119), [local overrides](reference/local_config_snapshot.txt#L5).
+For normal operation, the owner specifies cooling until **`probe_5` is at or below 5 °C**, then switching the freezer off before the camera starts. The copied profile's **12 °C** threshold was deliberately chosen for a shorter recent trial. Neither the old base default of −5 °C nor the historical 12 °C trial should be substituted for the normal 5 °C threshold. [Owner review R1](10-sources-and-maintenance.md#r1-owner-review-27-october-2026), [implemented threshold check](../Scripts/run_long_test.py#L383).
 
-| Setting | Base | Effective supplied configuration | Meaning |
+The table retains the earlier source profile for provenance. “Base” means the original value before local overrides; “historical copied profile” means the effective values from the preserved local snapshot. Settings in that column describe the copied trial profile, not a standing instruction to reuse every value for future runs. [Base timing and pre-cool settings](../Config/system_config.py#L62), [base endpoint settings](../Config/system_config.py#L119), [historical local overrides](reference/local_config_snapshot.txt#L5).
+
+| Setting | Original base | Historical copied profile | Meaning |
 |---|---|---|---|
 | `PRECOOL_BEFORE_TEST_ENABLED` | `True` | `True` | Automated pre-cool before each test. |
 | `PRECOOL_SENSOR_NAME` | `probe_2` | `probe_5` | Probe used for the cooling threshold. |
-| `PRECOOL_TARGET_C` | -5 °C | 12 °C | Pre-cool completes when probe is at or below target. |
+| `PRECOOL_TARGET_C` | -5 °C | 12 °C | Historical shorter trial; normal threshold is 5 °C on `probe_5` (owner review R1). |
 | `PRECOOL_TIMEOUT_HOURS` | 4 h | 7 h | Maximum pre-cool wait. |
 | `PRECOOL_POLL_INTERVAL_S` | 5 s | 5 s | Threshold polling cadence. |
 | `PRECOOL_SETTLE_AFTER_FREEZER_OFF_S` | 60 s | 60 s | Delay after switching freezer off. |
-| `TEST_END_MODE` | `time` | `temperature` | Effective measurement phase uses a probe threshold. |
+| `TEST_END_MODE` | `time` | `temperature` | Copied profile uses a probe threshold. |
 | `TEST_END_SENSOR_NAME` | `probe_2` | `probe_5` | Probe used for measurement endpoint. |
 | `TEST_END_TARGET_C` | 40 °C | 40 °C | Measurement threshold. |
 | `TEST_END_DIRECTION` | `above` | `above` | Endpoint requires temperature at or above threshold. |
 | `TEST_END_REQUIRED_CONSECUTIVE_READS` | 3 | 3 | Several new logger records must satisfy endpoint. |
 | `TEST_END_SAFETY_TIMEOUT_HOURS` | 14 h | 14 h | Temperature-mode deadline checked between operations; blocking work and the endpoint sweep can extend wall-clock duration. |
 | `TEST_END_FINAL_SWEEP_ENABLED` | `True` | `True` | Immediate final sweep when endpoint/timeout occurs between scheduled sweeps. |
-| `TEST_DURATION_HOURS` | 1 h | 12 h | Duration setting for time mode; not the effective temperature-mode endpoint. |
+| `TEST_DURATION_HOURS` | 1 h | 12 h | Duration setting for time mode; not the copied temperature-mode endpoint. |
 | `SWEEP_INTERVAL_SECONDS` | 180 s | 120 s | Wait scheduled after each attempt; capture/transfer time adds to start-to-start spacing. |
 | `MAX_SWEEPS` | 25 | 500 | Cap on numbered attempts including failures; can terminate before temperature endpoint. |
 | `REPEAT_TEST_COUNT` | 1 | 8 | Number requested in the repeat sequence. |
@@ -74,11 +76,7 @@ Sources: [temperature import](../Control/temperature_control.py#L23), [analysis 
 | `REPEAT_STOP_FILE_NAME` | `STOP_REPEAT` | `STOP_REPEAT` | Stop-sequence marker in the local results root. |
 | `CAMERA_KEEPALIVE_STREAM_ENABLED` | `False` | `True` | Keep video pipeline active between image sweeps. |
 
-The present effective protocol is therefore cooling to a `probe_5` threshold, switching the freezer off, then capturing repeatedly while warming toward a `probe_5` endpoint. That is a configured protocol for this snapshot, not evidence of a universal “freezer test” temperature range.
-
-### Configured warm start is not implemented
-
-`local_config.py` defines `PRECOOL_CAMERA_WARM_START_ENABLED=True`, a `probe_5` sensor and a 15 °C threshold, with comments about powering the camera on before it gets too cold. None of those three constants is referenced outside that file in the supplied source. The current long-test runner instead switches camera power off during pre-cool, switches freezer off at the pre-cool target, waits the settle period, and then switches camera power on for the 45 s boot wait. Do not describe a 15 °C warm start as operational in this version. [Unused local settings](reference/local_config_snapshot.txt#L18), [implemented pre-cool](../Scripts/run_long_test.py#L330), [implemented power-on](../Scripts/run_long_test.py#L559).
+The implemented sequence keeps camera power off during pre-cool, switches the freezer off at the threshold, waits the settle period, and then switches camera power on for the configured 45 s boot wait. There is no camera warm-start feature in the reviewed runner. [Implemented pre-cool](../Scripts/run_long_test.py#L330), [implemented power-on](../Scripts/run_long_test.py#L559).
 
 ### Other control, recovery and timing settings
 
@@ -117,7 +115,7 @@ The sidecar records requested and before/after applied exposure/gain, stream par
 
 ## Streaming and internal-temperature configuration
 
-The current local settings enable a long `v4l2-ctl --stream-mmap` stream on `/dev/video4`, with `100000000` requested frames, 2 s startup wait, frames discarded to `/dev/null`, PID file `/tmp/freezertest_keepalive_stream.pid`, and log file `/tmp/freezertest_keepalive_stream.log`. It is finite by frame count, despite being called continuous/keepalive. The code tests process existence for status, not actual frame progress or sensor freshness. [Settings](../Config/system_config.py#L99), [local enablement](reference/local_config_snapshot.txt#L36), [status](../Control/camera_keepalive_stream.py#L91), [launch](../Control/camera_keepalive_stream.py#L126).
+The copied local profile enables a long `v4l2-ctl --stream-mmap` stream on `/dev/video4`, with `100000000` requested frames, 2 s startup wait, frames discarded to `/dev/null`, PID file `/tmp/freezertest_keepalive_stream.pid`, and log file `/tmp/freezertest_keepalive_stream.log`. It is finite by frame count, despite being called continuous/keepalive. The code tests process existence for status, not actual frame progress or sensor freshness. [Settings](../Config/system_config.py#L99), [historical local enablement](reference/local_config_snapshot.txt#L36), [status](../Control/camera_keepalive_stream.py#L91), [launch](../Control/camera_keepalive_stream.py#L126).
 
 Normal capture shares the same video node, so the sweep reads internal temperatures while the keepalive is active, stops it, waits 2 s for buffers/device release, captures all filters, then restarts it and reads temperatures again. The sweep avoids starting a second refresh stream if a keepalive object was supplied. [Sweep sequence](../Scripts/run_single_sweep_remote.py#L282).
 
@@ -151,7 +149,7 @@ Run host commands from the repository root with the project available on the Pyt
 | `preflight_check.py` | Connectivity, SSH, camera script/data presence, Tic availability/status, output storage, MCC temperature/Hall read | Creates/deletes a storage test file; MCC connect/disconnect changes outputs and can turn camera off. `--test-camera-capture` creates/deletes a remote capture; `--test-lamp` toggles lamp. It is not suitable to run alongside an active test. |
 | `read_temp_loop.py` | Print/log thermocouple readings nominally every second | Uses full `TemperatureController`; connect/disconnect output side effects apply. Writes `temperature_log.jsonl` in working directory. |
 | `test_hall_sensor.py` | Watch raw Hall state while manually moving wheel | Standalone hard-coded MCC endpoint, AUXPORT0 bit 1; does not consume the shared host/channel configuration. Runs at top level when executed/imported. |
-| `calibrate_filterwheel.py` | Manual wheel alignment and saved position map | Moves/energizes motor and optionally controls lamp/camera; JSON is not auto-applied to running configuration. |
+| `calibrate_filterwheel.py` | Manual wheel alignment and saved position map | Operator verifies/calibrates filter positions before each run because the internal motor reference may drift. Moves/energizes motor and optionally controls lamp/camera; saved JSON is not auto-applied to running configuration. |
 | `test_homing_repeatability.py` | Three home cycles with +250 position offset between cycles | Produces diagnostic JSON and temperature log; controller positions are not a calibrated optical repeatability measurement. |
 | `test_filterwheel_idle_current.py` | Move each configured filter, wait 10 s for manual idle-current/heating check | Does not perform Hall homing itself; current state/position reference must be understood before motion. |
 | `test_freezer_relay.py` | Exercise freezer contactor | Switches real freezer and waits; CLI can override waits. Does not enforce a global minimum-off interlock. |
@@ -166,8 +164,9 @@ Sources: [preflight main](../Scripts/preflight_check.py#L275), [MCC preflight cl
 1. Confirm which copied source version matches the running host and deployed camera; record commit/checksums and environment versions.
 2. Select the intended local results path and confirm it is writable on the host actually running tests.
 3. Confirm current camera identity/operator/notes rather than carrying them into every future run unchanged. Their supplied values describe one configured run context.
-4. Resolve the unused warm-start settings before relying on camera initialization during cooling.
+4. Check the normal `probe_5` pre-cool threshold of 5 °C; retain deliberate trial departures as explicitly identified run settings.
 5. Confirm shared-supply sequencing, actual compressor limits and whether protections should be enforced centrally.
 6. Record exposure-control units/range, controller motion units and required current against the actual hardware.
 7. Choose the maintained Streamlit entry point; preserve historical repair tools as explicitly manual utilities.
 8. Record the approved physical probe map, then keep probe names and end-condition settings aligned with it.
+9. Verify/calibrate filter positions before each run and manually focus on the target plane whenever the camera is changed. These are owner-confirmed preparation tasks; preflight does not perform them. [Owner review R1](10-sources-and-maintenance.md#r1-owner-review-27-october-2026), [operating preparation](04-running-the-test.md#operator-preparation).

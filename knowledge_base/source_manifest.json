@@ -1,7 +1,7 @@
 {
-  "kb_version": "0.1",
-  "compiled_date": "2026-10-23",
-  "review_status": "first_review_draft",
+  "kb_version": "0.2",
+  "compiled_date": "2026-10-27",
+  "review_status": "owner_review_in_progress",
   "repository": "https://github.com/JcpeNewtec/FreezerTest",
   "remote_commit": "df4ccebbbd0f41e32f5ae415e967728e5845d56b",
   "remote_commit_date": "2026-10-12T09:24:36+02:00",
@@ -329,5 +329,245 @@
       "reason": "Reserved for future camera-development knowledge base"
     }
   ],
-  "local_config_published_reference": "knowledge_base/reference/local_config_snapshot.txt"
+  "local_config_published_reference": "knowledge_base/reference/local_config_snapshot.txt",
+  "original_source_review_date": "2026-10-23",
+  "owner_reviews": [
+    {
+      "id": "R1",
+      "date": "2026-10-27",
+      "source": "Owner message in this chat",
+      "topics": [
+        "normal probe_5 pre-cool at5C;12C shorter trial",
+        "retired camera-start workaround and owner faulty-HW diagnosis",
+        "Qtec Hypervision variants; inter-unit reproducibility and change evaluation",
+        "Thorlabs filter identities and rationale",
+        "Pololu controller, Hall sensor, MCC, probe and extension references",
+        "NEMA17; fixed Hall, rotating magnet",
+        "per-long-test wheel verification; manual focus when switching cameras",
+        "six filter-wheel STL files"
+      ]
+    }
+  ],
+  "local_configuration_cleanup": {
+    "date": "2026-10-27",
+    "path": "Config/local_config.py",
+    "removed_names": [
+      "PRECOOL_CAMERA_WARM_START_ENABLED",
+      "PRECOOL_CAMERA_WARM_START_SENSOR_NAME",
+      "PRECOOL_CAMERA_WARM_START_C"
+    ],
+    "reason": "Owner withdrew unused workaround after identifying faulty camera hardware",
+    "runtime_effect": "None; reviewed runner did not consume these names",
+    "sha256_after_cleanup": "549c4ae01c19bae6e091dd20a7d3e79f5a502e96229ad37b1006e2135ee7ce98",
+    "line_count_after_cleanup": 60,
+    "active_trial_threshold_left_unchanged_c": 12,
+    "normal_procedure_threshold_c": 5,
+    "git_tracked": false
+  },
+  "cad_inventory": "knowledge_base/reference/filterwheel-cad/inventory.json",
+  "cad_files": [
+    {
+      "filename": "Pl05.STL",
+      "sha256": "5add246a8f01e1cc4a9ca9b89cba3aa0659b70ebe1ded932457b3920893f2545",
+      "bytes": 2120684,
+      "triangles": 42412,
+      "bounding_box_min": [
+        0.0,
+        -6.938893903907228e-15,
+        0.0
+      ],
+      "bounding_box_max": [
+        144.0,
+        53.0,
+        51.0
+      ],
+      "extents_in_unconfirmed_mesh_units": [
+        144.0,
+        53.00000000000001,
+        51.0
+      ],
+      "role": "awaiting owner annotation"
+    },
+    {
+      "filename": "PI04-B.STL",
+      "sha256": "45fa055a4e35c171ac159c2b53bc939343df6dca04aa0a1fe603cb09ad42dede",
+      "bytes": 155684,
+      "triangles": 3112,
+      "bounding_box_min": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "bounding_box_max": [
+        39.98888397216797,
+        39.98888397216797,
+        13.469999313354492
+      ],
+      "extents_in_unconfirmed_mesh_units": [
+        39.98888397216797,
+        39.98888397216797,
+        13.469999313354492
+      ],
+      "role": "awaiting owner annotation"
+    },
+    {
+      "filename": "PI03.STL",
+      "sha256": "9a6e14d06ed84cb2610c9e711326e563b8bcd73eff1d9b8c2c60f9cdcf019675",
+      "bytes": 491684,
+      "triangles": 9832,
+      "bounding_box_min": [
+        0.0,
+        0.09690225124359131,
+        -1.734723475976807e-15
+      ],
+      "bounding_box_max": [
+        151.0,
+        150.90309143066406,
+        18.0
+      ],
+      "extents_in_unconfirmed_mesh_units": [
+        151.0,
+        150.80618917942047,
+        18.0
+      ],
+      "role": "awaiting owner annotation"
+    },
+    {
+      "filename": "Pl06.STL",
+      "sha256": "8cd4381e57661be8e170c5e703053c4f697037b99c1664e2dd99d907dc862028",
+      "bytes": 334284,
+      "triangles": 6684,
+      "bounding_box_min": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "bounding_box_max": [
+        100.0,
+        32.79999923706055,
+        117.0
+      ],
+      "extents_in_unconfirmed_mesh_units": [
+        100.0,
+        32.79999923706055,
+        117.0
+      ],
+      "role": "awaiting owner annotation"
+    },
+    {
+      "filename": "PI04.STL",
+      "sha256": "39d45ab6df3480d2c35d26a96696dec84aaa5237228b72e555c1029957eb6d78",
+      "bytes": 119884,
+      "triangles": 2396,
+      "bounding_box_min": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "bounding_box_max": [
+        39.98888397216797,
+        39.98888397216797,
+        10.0
+      ],
+      "extents_in_unconfirmed_mesh_units": [
+        39.98888397216797,
+        39.98888397216797,
+        10.0
+      ],
+      "role": "awaiting owner annotation"
+    },
+    {
+      "filename": "PI07.STL",
+      "sha256": "742b70f1615759458cf0cc56b73cb780b740911164c1d39072ee0900fb38a162",
+      "bytes": 117884,
+      "triangles": 2356,
+      "bounding_box_min": [
+        0.0,
+        -6.938893903907228e-15,
+        0.0
+      ],
+      "bounding_box_max": [
+        200.0,
+        15.0,
+        120.0
+      ],
+      "extents_in_unconfirmed_mesh_units": [
+        200.0,
+        15.000000000000007,
+        120.0
+      ],
+      "role": "awaiting owner annotation"
+    }
+  ],
+  "component_sources": [
+    {
+      "component": "ThorlabsFBH780-3",
+      "url": "https://www.thorlabs.com/item/FBH780-3",
+      "supplied_by_owner": true,
+      "supplied_date": "2026-10-27"
+    },
+    {
+      "component": "ThorlabsFLH1064-3",
+      "url": "https://www.thorlabs.com/item/FLH1064-3",
+      "supplied_by_owner": true,
+      "supplied_date": "2026-10-27"
+    },
+    {
+      "component": "ThorlabsFBH1550-4",
+      "url": "https://www.thorlabs.com/item/FBH1550-4",
+      "supplied_by_owner": true,
+      "supplied_date": "2026-10-27"
+    },
+    {
+      "component": "QtecHypervision",
+      "url": "https://docs.qtec.com/hsi/hypervision/intro/",
+      "supplied_by_owner": true,
+      "supplied_date": "2026-10-27"
+    },
+    {
+      "component": "TicT834",
+      "url": "https://www.pololu.com/product/3132",
+      "supplied_by_owner": true,
+      "supplied_date": "2026-10-27"
+    },
+    {
+      "component": "Hall_sensor",
+      "url": "https://docs.rs-online.com/9a79/A700000007013601.pdf",
+      "supplied_by_owner": true,
+      "supplied_date": "2026-10-27"
+    },
+    {
+      "component": "MCC",
+      "url": "https://www.digikey.dk/en/products/detail/digilent-inc/6069-410-025/16970338",
+      "supplied_by_owner": true,
+      "supplied_date": "2026-10-27"
+    },
+    {
+      "component": "KX_extension_wire",
+      "url": "https://dk.farnell.com/labfacility/xf-1275-far/thermocouple-wire-type-kx-10m/dp/2918721",
+      "supplied_by_owner": true,
+      "supplied_date": "2026-10-27"
+    },
+    {
+      "component": "Omega5SRTC-TT-KI-36-1M",
+      "url": "https://dk.omega.com/pptst/5LSC_5SRTC.html",
+      "supplied_by_owner": true,
+      "supplied_date": "2026-10-27"
+    }
+  ],
+  "hall_datasheet_review": {
+    "url": "https://docs.rs-online.com/9a79/A700000007013601.pdf",
+    "manufacturer": "Honeywell",
+    "family": "SL353",
+    "variants_covered": [
+      "SL353HT",
+      "SL353LT"
+    ],
+    "fitted_variant": "not confirmed",
+    "date_of_document": "2015-04",
+    "pages": 8,
+    "sha256": "8f273e4e3338799799ba59f505dd438d1c701c45d2142de0c45131c773bb0cf6",
+    "retrieved_date": "2026-10-27",
+    "review": "Text read; electrical table p4 and package/pin figure p7 visually checked; original PDF linked, not republished in repository"
+  }
 }

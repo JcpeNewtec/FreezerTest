@@ -1,61 +1,61 @@
 {
-  "kb_version": "0.1",
-  "compiled_date": "2026-10-23",
+  "kb_version": "0.2",
+  "compiled_date": "2026-10-27",
   "documents": 13,
-  "chunks": 120,
+  "chunks": 126,
   "max_chunk_characters": 4500,
   "inputs": [
     {
       "path": "knowledge_base/README.md",
-      "sha256": "a3c54d4213a1557cfacd2163825331479054eaf29e2573fd71cac25a50e7b729"
+      "sha256": "a14a143b1b3c929296678e3fdafe3716f0fe88b654f470538838e637ac27ec0a"
     },
     {
       "path": "knowledge_base/01-purpose-and-system-overview.md",
-      "sha256": "163fc7f0b0be453ad9517369da51348cb5503550474441c2ebedaccf94b0415d"
+      "sha256": "ff60bc7383c9adc27a8afaf3399c78ccf4cb5a45a8a858d2c6999fdce12d08bb"
     },
     {
       "path": "knowledge_base/02-hardware-and-connections.md",
-      "sha256": "1372c90c5333ccdc8762df59a620c475e8570e7ae2213aa7a9f8f2bfd2fda07d"
+      "sha256": "8a5bfdd49d8811a683d5f94798b93776b6709777c9d5c4d4ce7498fd9b5d8559"
     },
     {
       "path": "knowledge_base/03-software-and-configuration.md",
-      "sha256": "e2620bf6d229292c7dadbfdd3c5ecc3392fea9fb40129ebb4b6d204e976add75"
+      "sha256": "38063bc3ab445cdad2bfb0b4c34659fe8f3d324d1cfeb0be0a8d98c6f5e1c270"
     },
     {
       "path": "knowledge_base/04-running-the-test.md",
-      "sha256": "5c647bc731da01dc3b5349e1d13913474b18f6eab9c149637838c8379d6a644e"
+      "sha256": "ac04ad946d60c131ec07dfed026101907c6a83c7a8de4289ed19048eb37cce2c"
     },
     {
       "path": "knowledge_base/05-data-and-metadata.md",
-      "sha256": "1922750221a203e9aee4e8b1d849230c8588a277890044ceb6e1b1acc83179e4"
+      "sha256": "0c053b8e7d49e82c19845afec12f8719525c5e4adef3049dba35cdacfc3e4cdd"
     },
     {
       "path": "knowledge_base/06-analysis-methodology.md",
-      "sha256": "19bc17bbfa8cb6e0784c4c80672076e29fba2faba969c4c29266d0d46df9e72a"
+      "sha256": "e348f0fe13b7cf5039b695d772e3d7be9ba4b1ae64d8daa816eba127401d488d"
     },
     {
       "path": "knowledge_base/07-analysis-tools-and-troubleshooting.md",
-      "sha256": "0d041465a7d7478119d687ac578124f175c0f0777bc204261072e4d191bb159f"
+      "sha256": "096f377185f4b9666f0340d0fe2dfb4f8510a54009f748c55e8a7b62d8875b76"
     },
     {
       "path": "knowledge_base/08-project-context.md",
-      "sha256": "6b7668bc0a8e758c98b43f36e1eb2353725f10b08fc270ee1d72734ba062c6f3"
+      "sha256": "7c98c5918fe92e6a4e0d1df542f0229e879f498e7f4afe80817c6f3bf7569636"
     },
     {
       "path": "knowledge_base/09-review-questions-and-gaps.md",
-      "sha256": "25fbfbb2b7bab9fe57c3007e7ac5bdf8c1cf9fcc806c8212c7b5d93d17f2e10c"
+      "sha256": "a95ba6530e3779ef1fe1580e90c350c17945581f9ea8793ebbd55a6d91a071be"
     },
     {
       "path": "knowledge_base/10-sources-and-maintenance.md",
-      "sha256": "39e6cb9bc67af2a00fee9333933f2ad0a017e536f322dd939f3ecb71b67df956"
+      "sha256": "c0b98ec1fc86b538a4678b405a37047ff5fd792eced64b2613bb188ed4080230"
     },
     {
       "path": "knowledge_base/11-local-ai-guide.md",
-      "sha256": "a325b53995310e90916ff78af5f14e26fcd0e9123fe49c662fdd15d7d88b6d5c"
+      "sha256": "80eb421e1a7e36e9804f7888c9fabd2177aa4bbc9ac00b992e3639c260426621"
     },
     {
       "path": "knowledge_base/12-glossary.md",
-      "sha256": "64a6df833253e352762098ea83687ade7532cb0d0ca418b7e7ef26052ce3d62e"
+      "sha256": "6677bb27b3172c86d23908a1dd79cc201065f5533b47310ea11adfb91a48cbfe"
     }
   ]
 }

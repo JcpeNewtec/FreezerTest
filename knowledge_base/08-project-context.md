@@ -1,12 +1,20 @@
-# Context recovered from project chats
+# Project context and owner review
 
-Status: historical context for owner review · Retrieved: 23 October 2026
+Status: historical chat context retrieved on 23 October 2026; updated by owner review on 27 October 2026.
 
-This page records setup facts and development intent recovered from three accessible project chats. It does not reproduce individual result logs or camera-performance conclusions. A prior assistant suggestion is not evidence that a component was installed or a patch applied.
+This page combines setup facts recovered from three accessible project chats with the owner's subsequent clarifications. The 27 October review takes precedence where it corrects historical discussion. It does not reproduce individual result logs or camera-performance conclusions. A prior assistant suggestion is not evidence that a component was installed or a patch applied.
+
+## Current scope and normal preparation
+
+The owner confirms that the apparatus tests variants in the **Qtec Hypervision camera family**, with no single fixed reference camera. The test has two purposes: assess repeatability across units of the same type, and evaluate the effects of changes. The camera family is an owner-supplied identification; it is not evidence that the reviewed scripts use a manufacturer SDK. Current capture code uses V4L2 and GStreamer. [Owner review R1](10-sources-and-maintenance.md#r1-owner-review-27-october-2026), [capture pipeline](../Camera_scripts/camera_control.py#L114).
+
+Normal pre-cool uses **`probe_5` at 5 °C**. The 12 °C value in the preserved local configuration was intentionally used for a shorter recent trial. Operators verify/calibrate filter positions before every run because the internal motor reference may drift, and manually focus on the target plane whenever the camera changes. [Owner review R1](10-sources-and-maintenance.md#r1-owner-review-27-october-2026), [operating preparation](04-running-the-test.md#operator-preparation).
+
+An earlier camera warm-start workaround was abandoned after the owner traced the startup problem to faulty camera hardware, which was unacceptable. It is not part of the normal procedure or an outstanding implementation task; the reviewed runner has no warm-start feature. [Owner review R1](10-sources-and-maintenance.md#r1-owner-review-27-october-2026), [camera startup sequence](../Scripts/run_long_test.py#L559).
 
 ## Camera construction reported by the owner
 
-Source: **Freezer Camera Drift Analysis**, owner message dated **31 August 2026**; [T2 provenance](10-sources-and-maintenance.md#t2-freezer-camera-drift-analysis).
+Source: **Freezer Camera Drift Analysis**, owner message dated **31 August 2026**; [T2 provenance](10-sources-and-maintenance.md#t2-freezer-camera-drift-analysis). These details describe the build discussed then and should not be assumed identical across every Hypervision variant or unit.
 
 | Item | What the owner stated | Evidence boundary / review needed |
 |---|---|---|
@@ -20,7 +28,7 @@ Source: **Freezer Camera Drift Analysis**, owner message dated **31 August 2026*
 
 The owner attached four images in that chat, but their pixels were not returned by the history tool. Therefore, details the earlier assistant inferred visually—spring/adjuster layout, column count, plate material, adhesive thickness—are **not adopted as confirmed hardware facts** here.
 
-The prior assistant named an IMX990 detector and cited material properties. Those assertions were not independently established by the user text or reviewed repository. This draft leaves detector identity and numerical material properties open instead of importing them as facts.
+Qtec's family documentation provides product context, but the detector, optics, and materials used in any particular prototype must be tied to that unit's revision record. Historical assistant assertions and a generic product specification do not establish an as-built configuration for every tested camera.
 
 The local test notes contain `PC Grating Holder`. That is configured descriptive metadata, not proof that every past or future test uses the same construction. [Local configuration](reference/local_config_snapshot.txt#L69).
 
@@ -35,21 +43,11 @@ Source: **Temperature Test Control**, owner messages dated **22 April and 22 Jun
 
 Earlier suggestions included desiccant, dry-air or nitrogen purge, an optical enclosure, local heating, humidity/dew-point logging, and improved cable sealing. **None of those is confirmed as installed.** The reviewed software has no humidity channel, dew-point calculation, purge control, or filter-heater loop. Their existence or absence physically must be checked with the owner.
 
-The earlier assistant mentioned a 0–40 °C range; the retrieved user messages do not establish a permanent specification. The supplied local configuration currently selects 12–40 °C probe thresholds. Neither should be presented as the chamber's qualified operating range.
+The earlier assistant mentioned a 0–40 °C range without establishing a permanent specification. The preserved local profile selects 12–40 °C probe thresholds for the shorter trial, while the owner confirms normal pre-cool at 5 °C on `probe_5`. Probe thresholds are not a qualification of the chamber's full operating range. [Owner review R1](10-sources-and-maintenance.md#r1-owner-review-27-october-2026), [historical local profile](reference/local_config_snapshot.txt#L5).
 
 ## Control-software development context
 
 Source: **Python script for Tic controller**, available messages dated **16–20 October 2026**; [T1 provenance](10-sources-and-maintenance.md#t1-python-script-for-tic-controller).
-
-### Warm-start proposal and current mismatch
-
-The latest accessible assistant response proposed powering the camera when `probe_5` cooled to 15 °C, beginning streaming while the freezer continued toward 12 °C, and then starting measurement with the camera already initialized. This was proposed in response to startup difficulties after cooling. A patch and updated archive were linked in that chat; their attachment contents were not available here.
-
-The supplied `local_config.py` contains the corresponding `PRECOOL_CAMERA_WARM_START_*` settings, but the supplied `run_long_test.py` does not consume them. All shared local source files match the public repository's 12 October commit. Therefore, **the patch cannot be assumed applied to this source snapshot**, and this knowledge base documents the existing sequence rather than the proposed one. [Configuration](reference/local_config_snapshot.txt#L18), [implemented pre-cool](../Scripts/run_long_test.py#L330).
-
-The temperature-dependent startup explanation remains a hypothesis, not a verified manufacturer limitation or an established minimum camera operating temperature.
-
-There is also an unresolved wiring constraint: a calibration-script comment says the freezer contactor uses the camera 24 V supply and camera/freezer should not be enabled simultaneously. The proposed warm-start intentionally overlaps their enabled states. Confirm the actual circuit and intended interlocks before deciding how that proposal should be implemented; neither the comment nor the prior proposal is a verified electrical design. [Calibration comment](../Scripts/calibrate_filterwheel.py#L187), [review A04](09-review-questions-and-gaps.md).
 
 ### Device naming and deployed-file integrity
 

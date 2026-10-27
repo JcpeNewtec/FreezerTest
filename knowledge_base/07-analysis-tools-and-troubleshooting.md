@@ -1,6 +1,6 @@
 # Analysis tools and troubleshooting
 
-Status: first version, derived from supplied scripts. Source inspection date: 2026-10-23. Commands below describe how the tools are intended to be used; creating this knowledge base did not execute acquisition, hardware-control, repair, or analysis scripts.
+Status: source-derived tool reference with owner clarifications from 2026-10-27. Source inspection date: 2026-10-23. Commands below describe how the tools are intended to be used; creating this knowledge base did not execute acquisition, hardware-control, repair, or analysis scripts.
 
 ## Working directory and dependencies
 
@@ -10,10 +10,10 @@ The offline analyzer needs NumPy, pandas, Pillow, and Matplotlib; SciPy is neede
 
 ## Recommended analysis workflow
 
-1. Inspect the region overlays on an early and late sweep, and on any substantially shifted image.
-2. Check that `Config/analysis_config.py` matches the intended image framing and metric settings.
+1. Retain a record of the operator's wheel-position verification before every long test and manual focus adjustment when changing cameras. These are owner-confirmed setup practices; the analysis tools do not enforce them. [Owner review](10-sources-and-maintenance.md#r1-owner-review-27-october-2026).
+2. Inspect the region overlays on an early and late sweep, after a camera change, and on any substantially shifted image. Check that `Config/analysis_config.py` matches the intended image framing and metric settings.
 3. Analyze an individual test and inspect `sweep_diagnostics.csv` for errors, missing filters, ROI counts, and fit success.
-4. When comparing repeat cycles, regenerate stale analyses with the same settings, check repeat-group metadata, then run repeat analysis or load the desired cycles in the updated viewer.
+4. When comparing repeat cycles, regenerate stale analyses with the same settings, check unit/revision and repeat-group metadata, then run repeat analysis or load the desired cycles in the updated viewer. Keep within-unit cycle repeatability distinct from comparisons between units or development revisions.
 
 Keep the acquisition images and metadata alongside their derived analysis. Record the code revision and configuration used for reporting; the analyzer does not save a configuration snapshot or version stamp into its output itself. See [Analysis methodology](06-analysis-methodology.md) for definitions and interpretation limits.
 
@@ -102,6 +102,10 @@ The first two CSV files currently contain the same combined table. The cycle-sta
 
 Both viewers read existing `analysis/sweep_metrics.csv` files, optionally merge absolute position columns from adjacent `sweep_diagnostics.csv`, add test metadata, calculate repeat deltas, and provide Plotly overlays and a selected-data CSV download. They do not analyze images or regenerate missing measurements. They offer overview, spectral resolution, spectral shift, spatial performance, signal stability, camera internal temperatures, cycle repeatability, and custom plot tabs. [Original loading](../Scripts/compare_tests_streamlit.py#L125), [updated loading](../Scripts/compare_tests_streamlit_updated.py#L543), [updated tabs](../Scripts/compare_tests_streamlit_updated.py#L1329).
 
+The rig tests variants of the qtec Hypervision camera family, so use `camera_id` to identify the individual unit rather than putting only the common family name in that field. Record the hardware/design revision and relevant setup differences in `notes` or accompanying run metadata. Include the focus adjustment after a camera change, wheel-position check, exposure/gain, ROI settings, and thermal protocol when comparing tests. The metadata editor exposes camera ID, date, duration, operator, and notes; it does not provide structured fields or automatic comparability checks for all these details. The updated editor preserves additional fields already present. [Owner review](10-sources-and-maintenance.md#r1-owner-review-27-october-2026), [updated metadata editor](../Scripts/compare_tests_streamlit_updated.py#L893).
+
+For statistical repeatability between units, select physically comparable units and revisions under comparable conditions. When evaluating a deliberate development change, label that revision difference and avoid treating it as unexplained unit variation. Do not combine different units into one repeat group to make the within-group return-error calculation act as an inter-unit statistic: the viewers provide overlays and within-group reference differences, not a population-level repeatability model. The experimental comparison plan must define that statistical treatment. Individual performance outcomes belong in the separate camera-development knowledge base.
+
 | Aspect | `compare_tests_streamlit.py` | `compare_tests_streamlit_updated.py` |
 | --- | --- | --- |
 | Browsing | Builds a JSON metadata catalog, then automatically loads selected tests' CSVs | Browses JSON metadata first; CSVs load after **Load checked data** |
@@ -158,6 +162,7 @@ Both repair scripts treat malformed or unreadable JSON as an empty dictionary. A
 | A sweep is absent from plots | `analysis_error` in diagnostics; missing images; nonfinite metric; missing chosen X/Y values |
 | Spatial Gaussian width or shift is missing | SciPy availability; fit enabled; ROI alignment; valid edge and enough fit samples |
 | Spatial position suddenly jumps | Wrong dark-line minimum/edge; fallback to another gradient peak; changed framing; inspect debug profiles and selection diagnostics |
+| Width or position differs after changing cameras | Check recorded unit/revision, manual focus adjustment, alignment, ROI placement, and wheel-position verification before attributing the difference to unit behavior |
 | Raw spatial position differs from Gaussian position | Raw diagnostics can follow the strongest edge in the whole ROI while the Gaussian uses the selected target edge |
 | Spectral FWHM is missing | Peak/crossings too close to an ROI boundary; feature clipped; weak/flat profile; wrong ROI |
 | Spectral widths change after smoothing edits | Spectral smoothing changes the measurement input; compare analyses using identical settings |

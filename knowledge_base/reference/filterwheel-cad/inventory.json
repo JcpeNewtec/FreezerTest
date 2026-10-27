@@ -1,0 +1,139 @@
+{
+  "provided_date": "2026-10-27",
+  "source": "Owner-supplied filter-wheel components",
+  "stl_units": "Not encoded in STL; must be confirmed",
+  "files": [
+    {
+      "filename": "Pl05.STL",
+      "sha256": "5add246a8f01e1cc4a9ca9b89cba3aa0659b70ebe1ded932457b3920893f2545",
+      "bytes": 2120684,
+      "triangles": 42412,
+      "bounding_box_min": [
+        0.0,
+        -6.938893903907228e-15,
+        0.0
+      ],
+      "bounding_box_max": [
+        144.0,
+        53.0,
+        51.0
+      ],
+      "extents_in_unconfirmed_mesh_units": [
+        144.0,
+        53.00000000000001,
+        51.0
+      ],
+      "role": "awaiting owner annotation"
+    },
+    {
+      "filename": "PI04-B.STL",
+      "sha256": "45fa055a4e35c171ac159c2b53bc939343df6dca04aa0a1fe603cb09ad42dede",
+      "bytes": 155684,
+      "triangles": 3112,
+      "bounding_box_min": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "bounding_box_max": [
+        39.98888397216797,
+        39.98888397216797,
+        13.469999313354492
+      ],
+      "extents_in_unconfirmed_mesh_units": [
+        39.98888397216797,
+        39.98888397216797,
+        13.469999313354492
+      ],
+      "role": "awaiting owner annotation"
+    },
+    {
+      "filename": "PI03.STL",
+      "sha256": "9a6e14d06ed84cb2610c9e711326e563b8bcd73eff1d9b8c2c60f9cdcf019675",
+      "bytes": 491684,
+      "triangles": 9832,
+      "bounding_box_min": [
+        0.0,
+        0.09690225124359131,
+        -1.734723475976807e-15
+      ],
+      "bounding_box_max": [
+        151.0,
+        150.90309143066406,
+        18.0
+      ],
+      "extents_in_unconfirmed_mesh_units": [
+        151.0,
+        150.80618917942047,
+        18.0
+      ],
+      "role": "awaiting owner annotation"
+    },
+    {
+      "filename": "Pl06.STL",
+      "sha256": "8cd4381e57661be8e170c5e703053c4f697037b99c1664e2dd99d907dc862028",
+      "bytes": 334284,
+      "triangles": 6684,
+      "bounding_box_min": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "bounding_box_max": [
+        100.0,
+        32.79999923706055,
+        117.0
+      ],
+      "extents_in_unconfirmed_mesh_units": [
+        100.0,
+        32.79999923706055,
+        117.0
+      ],
+      "role": "awaiting owner annotation"
+    },
+    {
+      "filename": "PI04.STL",
+      "sha256": "39d45ab6df3480d2c35d26a96696dec84aaa5237228b72e555c1029957eb6d78",
+      "bytes": 119884,
+      "triangles": 2396,
+      "bounding_box_min": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "bounding_box_max": [
+        39.98888397216797,
+        39.98888397216797,
+        10.0
+      ],
+      "extents_in_unconfirmed_mesh_units": [
+        39.98888397216797,
+        39.98888397216797,
+        10.0
+      ],
+      "role": "awaiting owner annotation"
+    },
+    {
+      "filename": "PI07.STL",
+      "sha256": "742b70f1615759458cf0cc56b73cb780b740911164c1d39072ee0900fb38a162",
+      "bytes": 117884,
+      "triangles": 2356,
+      "bounding_box_min": [
+        0.0,
+        -6.938893903907228e-15,
+        0.0
+      ],
+      "bounding_box_max": [
+        200.0,
+        15.0,
+        120.0
+      ],
+      "extents_in_unconfirmed_mesh_units": [
+        200.0,
+        15.000000000000007,
+        120.0
+      ],
+      "role": "awaiting owner annotation"
+    }
+  ]
+}

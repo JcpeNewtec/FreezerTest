@@ -1,12 +1,14 @@
 # Purpose and system overview
 
-Status: first review draft · Source snapshot: 23 October 2026 · Scope: setup and methodology
+Status: owner review, first batch · Updated: 27 October 2026 · Code snapshot reviewed: 23 October 2026
 
 ## What FreezerTest does
 
 FreezerTest automates temperature-dependent optical measurements of a camera using a freezer, temperature probes, a switched light source, and a motorized filter wheel. A host PC coordinates the apparatus and asks an embedded Linux camera computer to capture images. Offline analysis extracts image position, line/edge width, signal, and image-noise indicators, then compares their evolution within a test and across repeated tests.
 
-The owner describes the camera as an **Offner optical setup**. That is owner-reported context, rather than a complete optical prescription. Exact camera model, detector identity, slit dimensions, mirror/grating specifications, target geometry, and illumination hardware remain to be supplied. See [project context](08-project-context.md) and [hardware](02-hardware-and-connections.md).
+The devices under test are **variants of the Qtec Hypervision camera family**, using Qtec computer logic and hardware. There is no single fixed reference-camera revision: multiple units of the same kind are tested to build evidence of reproducibility, while deliberate camera changes are also tested to investigate their consequences. The method and apparatus belong here; individual outcomes and development decisions remain outside this corpus. [Owner review R1](10-sources-and-maintenance.md#r1-owner-review-27-october-2026).
+
+Qtec describes Hypervision as an Offner push-broom hyperspectral camera based on its C-series platform. The owner describes the relevant camera range as approximately 400–1700 nm; Qtec's current VIS-SWIR family documentation specifies 430–1700 nm. The exact configuration, detector, optics, and revision should be recorded for each tested unit rather than copied wholesale from a generic product page. See [Qtec Hypervision](https://docs.qtec.com/hsi/hypervision/intro/), [project context](08-project-context.md), and [hardware](02-hardware-and-connections.md).
 
 Primary source: [long-test runner](../Scripts/run_long_test.py#L441), [single sweep](../Scripts/run_single_sweep_remote.py#L201), [analysis configuration](../Config/analysis_config.py#L14), and [chat T2](10-sources-and-maintenance.md#t2-freezer-camera-drift-analysis).
 
@@ -55,17 +57,17 @@ This distinction matters: a filter-4 image is taken later than the filter-1 imag
 | Wheel position | Analysis name | Intended role | Nominal optical filter setting | Exposure control value |
 |---|---|---|---|---|
 | 1 | `no_filter` | Spatial edge/line-spread analysis and signal ROIs | Open/no filter according to analysis configuration | 3000 |
-| 2 | `bp_780` | Spectral line profile | 780 nm, nominal filter FWHM 3 nm | 15000 |
-| 3 | `bp_1064` | Spectral line profile | 1064 nm, nominal filter FWHM 3 nm | 8000 |
-| 4 | `bp_1550` | Spectral line profile and background/noise ROIs | 1550 nm, nominal filter FWHM 4 nm | 15000 |
+| 2 | `bp_780` | Spectral line profile | Thorlabs **FBH780-3**: 780 nm, nominal FWHM 3 nm | 15000 |
+| 3 | `bp_1064` | Spectral line profile | Thorlabs **FLH1064-3**: 1064 nm, nominal FWHM 3 nm | 8000 |
+| 4 | `bp_1550` | Spectral line profile and background/noise ROIs | Thorlabs **FBH1550-4**: 1550 nm, nominal FWHM 4 nm | 15000 |
 
-These names and nominal bandwidths come from [analysis configuration](../Config/analysis_config.py#L14); exposures come from [local configuration](reference/local_config_snapshot.txt#L58). They are not supplier certificates or a verified wheel-loading record. Exposure values are passed to `exposure_time_absolute`; their physical unit must be confirmed for the deployed driver. See [camera control](../Camera_scripts/camera_control.py#L50).
+The owner selected these narrow bandpass filters to sample widely separated portions of the camera's wavelength range. They provide three discrete spectral samples, not continuous coverage or absolute wavelength calibration. Component identities are owner-confirmed; nominal wavelengths/widths agree with [Thorlabs' specification table](https://www.thorlabs.us/newgrouppage9.cfm?objectgroup_id=16235&pn=FB1070-10). The position-to-analysis mapping comes from [analysis configuration](../Config/analysis_config.py#L14); exposures shown are the historical copied profile, from [local configuration](reference/local_config_snapshot.txt#L58). Per-run filter-position verification remains necessary. Exposure values are passed to `exposure_time_absolute`; their physical unit must be confirmed for the deployed driver. See [camera control](../Camera_scripts/camera_control.py#L50).
 
 ## Current implemented test concept
 
-With the supplied local overrides, the runner starts temperature logging, switches lamp and camera off, and runs the freezer until `probe_5 <= 12 °C`. A pre-cool timeout aborts the test. On successful pre-cool, it switches the freezer off, waits 60 seconds, powers the camera on, waits 45 seconds, and starts keepalive streaming. It then captures sweeps during warm-up until the configured endpoint logic ends measurement. The configured endpoint is three consecutive new records observed by the runner at `probe_5 >= 40 °C`, with a 14-hour measurement deadline checked between operations. Blocking operations and the final sweep can extend that deadline. The configured repeat count is eight.
+Normal preparation includes verifying filter positions before each long test and manually focusing on the target plane when changing cameras. The runner starts temperature logging, switches lamp and camera off, and runs the freezer until the selected pre-cool threshold is met; the owner-confirmed normal threshold is **`probe_5 <= 5 °C`**. The copied configuration used 12 °C for a shorter trial. A pre-cool timeout aborts the test. On successful pre-cool, the runner switches the freezer off, waits 60 seconds, powers the camera on, waits 45 seconds, and starts keepalive streaming when enabled. It then captures sweeps during warm-up until the selected endpoint logic ends measurement. The historical copied profile ends after three consecutive new records observed at `probe_5 >= 40 °C`, with a 14-hour measurement deadline checked between operations, and requests eight repeats. Blocking operations and the final sweep can extend that deadline. These trial-specific settings should not be treated as universal protocol requirements. [Owner review R1](10-sources-and-maintenance.md#r1-owner-review-27-october-2026).
 
-The current runner **does not implement** the requested 15 °C warm-start branch. It also does not command a controlled heating rate, establish thermal equilibrium at setpoints, or check humidity. These distinctions are central to interpreting temperature-associated measurements. See [running the test](04-running-the-test.md), [review gaps](09-review-questions-and-gaps.md), and [pre-cool code](../Scripts/run_long_test.py#L330).
+The runner does not command a controlled heating rate, establish thermal equilibrium at setpoints, or check humidity. These distinctions are central to interpreting temperature-associated measurements. See [running the test](04-running-the-test.md), [review gaps](09-review-questions-and-gaps.md), and [pre-cool code](../Scripts/run_long_test.py#L330).
 
 ## What the analysis can answer
 

@@ -1,6 +1,6 @@
 # Glossary
 
-Status: terminology for version 0.1
+Status: terminology for version 0.2
 
 | Term | Meaning here |
 |---|---|
