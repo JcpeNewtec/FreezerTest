@@ -1,6 +1,6 @@
 # FreezerTest knowledge base — portable edition
 
-Version 0.2 · Owner review in progress · 2026-10-27
+Version 0.3 · Owner review in progress · 2026-10-29
 
 Generated from the canonical Markdown pages. Import this file OR another export, not both.
 
@@ -10,11 +10,11 @@ Generated from the canonical Markdown pages. Import this file OR another export,
 <a id="doc-README-freezertest-knowledge-base"></a>
 # FreezerTest knowledge base
 
-Version: **0.2 — owner review, first batch** · Updated: **27 October 2026**
+Version: **0.3 — owner review and component photographs** · Updated: **29 October 2026**
 
 This knowledge base explains the FreezerTest apparatus, control software, test sequence, data, and analysis methodology. It is intended for operators, colleagues, and a local AI answering questions about the test. It describes a particular source snapshot, not a certified operating procedure or a validated hardware inventory.
 
-The original code review covered **33 shared Python/shell files**, identical to GitHub commit `df4ccebbbd0f41e32f5ae415e967728e5845d56b` (12 October 2026), plus the local configuration. Three project chats supplied historical context. The owner's **27 October review** adds component identities, operating corrections, and six filter-wheel CAD files, and supersedes conflicting historical assumptions. Details still awaiting confirmation are kept in one [review register](#doc-09-review-questions-and-gaps). See [sources and maintenance](#doc-10-sources-and-maintenance) for provenance.
+The original code review covered **33 shared Python/shell files**, identical to GitHub commit `df4ccebbbd0f41e32f5ae415e967728e5845d56b` (12 October 2026), plus the local configuration. Three project chats supplied historical context. Owner reviews on **27 and 29 October** add component identities, nine component photographs, six filter-wheel CAD files, the usual probe map, target/illumination details, and operating corrections. Those confirmations supersede conflicting historical assumptions. Unanswered questions remain in one [review register](#doc-09-review-questions-and-gaps). See [sources and maintenance](#doc-10-sources-and-maintenance) for provenance.
 
 <a id="doc-README-find-information"></a>
 ## Find information
@@ -39,16 +39,17 @@ The original code review covered **33 shared Python/shell files**, identical to 
 
 - **Implemented / source-derived:** visible behavior in the reviewed code. This does not prove the deployed camera has the same files.
 - **Configured:** a value in the reviewed configuration. Local overrides take precedence where the consuming module uses the value. A setting's presence alone does not implement a feature.
-- **Owner-reported:** a physical detail or observation stated by the owner in a retrieved project chat; historical and subject to review.
+- **Owner-confirmed:** a dated description of installed hardware or procedure. Usual arrangements may change by test; use that test's recorded setup when it differs.
+- **Photographed:** a visible part/label in the supplied images. A nameplate rating is not a measured load, and visible wiring is not a complete circuit drawing.
 - **Proposed / unverified:** an earlier suggestion, an interpretation, or a feature not established by the reviewed sources.
 - **Unknown:** evidence is missing. These gaps are deliberately left open.
 
 <a id="doc-README-read-these-distinctions-first"></a>
 ## Read these distinctions first
 
-1. **Normal pre-cool ends at `probe_5 <= 5 °C`.** The 12 °C setting in the historical copied profile was intentional for a shorter trial. The probe's physical location still needs confirmation. Neither threshold establishes thermal equilibrium of the whole camera.
+1. **Normal pre-cool ends at `probe_5 <= 5 °C`.** Probe 5 is usually attached to the underside of the upper aluminium tray. The historical 12 °C setting was for a shorter trial. Probe placement can change and must be recorded per test; neither threshold establishes thermal equilibrium of the whole camera.
 2. The test covers **Qtec Hypervision variants**, both to establish reproducibility across units and to investigate design changes. There is no single fixed reference-camera revision. Record the unit, revision, focus/setup, and run settings for meaningful comparisons.
-3. The measurement phase uses the chamber's warm-up after cooling. No closed-loop heater ramp or temperature stability hold is implemented in the reviewed runner.
+3. **Freezer on/camera off for cooling → freezer off → camera on for measurement.** Camera heat and intermittent lamp heat warm the chamber toward the endpoint. Normal operation never powers camera and freezer together. There is no controlled heater ramp or stability hold.
 4. Analysis widths and shifts are in **pixels**. Signal and image-noise metrics are in **digital numbers (DN)**. The code does not establish calibrated spectral resolution in nm, temporal read noise, or acceptance limits.
 5. Preflight and diagnostic scripts can switch real outputs. They are not all read-only checks. Do not run them alongside an acquisition.
 
@@ -59,7 +60,7 @@ Individual runs, images, measured performance, camera rankings, and causal concl
 
 The numbered Markdown files are the editable source of truth. `exports/FreezerTest_Knowledge_Base.md` is a single-file copy for import. `exports/documents.jsonl` provides one record per document, and `exports/chunks.jsonl` provides section-level records. Import **one representation only**, so the local AI does not retrieve duplicate copies. [The local AI guide](#doc-11-local-ai-guide) explains the details.
 
-The first review batch replaces answered gaps and removes the abandoned warm-start procedure from active guidance. Its unused variables have been removed from the local configuration; the original configuration snapshot remains historical evidence. No acquisition program was run, no camera files were deployed, and no historical analysis was rerun. The [CAD reference](../reference/filterwheel-cad/README.md) and labeled preview are part of the documentation, outside the scripts-only test-PC checkout.
+The [component photographs](../reference/component-photos/README.md), [CAD reference](../reference/filterwheel-cad/README.md), and AI exports are all under `knowledge_base/`, outside the scripts-only test-PC checkout. The owner confirms that the local AI already accesses GitHub through a deploy SSH key; the guide describes content/version checks, not a missing connection. No acquisition code or deployed camera files were changed in this update.
 
 ---
 
@@ -69,12 +70,14 @@ The first review batch replaces answered gaps and removes the abandoned warm-sta
 <a id="doc-01-purpose-and-system-overview-purpose-and-system-overview"></a>
 # Purpose and system overview
 
-Status: owner review, first batch · Updated: 27 October 2026 · Code snapshot reviewed: 23 October 2026
+Status: owner review, second batch · Updated: 29 October 2026 · Code snapshot reviewed: 23 October 2026
 
 <a id="doc-01-purpose-and-system-overview-what-freezertest-does"></a>
 ## What FreezerTest does
 
 FreezerTest automates temperature-dependent optical measurements of a camera using a freezer, temperature probes, a switched light source, and a motorized filter wheel. A host PC coordinates the apparatus and asks an embedded Linux camera computer to capture images. Offline analysis extracts image position, line/edge width, signal, and image-noise indicators, then compares their evolution within a test and across repeated tests.
+
+The camera sits on an aluminium tray in the upper freezer. The target is **white PTFE with a black 3D-printed cage** to form sharp dark lines, illuminated by a **halogen tube and silver-coated parabolic reflector** focused onto the target. PTFE was chosen by the owner for reflection over the intended 400–1700 nm span; no calibrated reflectance standard is implied. [Owner review R2](#doc-10-sources-and-maintenance-r2-owner-review-and-component-photos-29-october-2026), [hardware and photographs](#doc-02-hardware-and-connections).
 
 The devices under test are **variants of the Qtec Hypervision camera family**, using Qtec computer logic and hardware. There is no single fixed reference-camera revision: multiple units of the same kind are tested to build evidence of reproducibility, while deliberate camera changes are also tested to investigate their consequences. The method and apparatus belong here; individual outcomes and development decisions remain outside this corpus. [Owner review R1](#doc-10-sources-and-maintenance-r1-owner-review-27-october-2026).
 
@@ -97,12 +100,14 @@ flowchart TD
     FILES[Camera staging: PNG and JSON]
     LOCAL[Host test folders: images, logs, metadata]
     ANALYSIS[Offline analysis and comparison tools]
-    PC -->|network uldaq| DAQ
+    NET[5-port Ethernet switch]
+    PC --> NET
+    NET -->|network uldaq| DAQ
     TC --> DAQ
     HALL --> DAQ
     DAQ --> RELAYS
     PC -->|ticcmd interface| TIC
-    PC -->|SSH commands| CAM
+    NET -->|SSH commands| CAM
     CAM --> FILES
     FILES -->|SCP transfer and local checks| LOCAL
     PC --> LOCAL
@@ -141,6 +146,10 @@ The owner selected these narrow bandpass filters to sample widely separated port
 
 Normal preparation includes verifying filter positions before each long test and manually focusing on the target plane when changing cameras. The runner starts temperature logging, switches lamp and camera off, and runs the freezer until the selected pre-cool threshold is met; the owner-confirmed normal threshold is **`probe_5 <= 5 °C`**. The copied configuration used 12 °C for a shorter trial. A pre-cool timeout aborts the test. On successful pre-cool, the runner switches the freezer off, waits 60 seconds, powers the camera on, waits 45 seconds, and starts keepalive streaming when enabled. It then captures sweeps during warm-up until the selected endpoint logic ends measurement. The historical copied profile ends after three consecutive new records observed at `probe_5 >= 40 °C`, with a 14-hour measurement deadline checked between operations, and requests eight repeats. Blocking operations and the final sweep can extend that deadline. These trial-specific settings should not be treated as universal protocol requirements. [Owner review R1](#doc-10-sources-and-maintenance-r1-owner-review-27-october-2026).
 
+The **camera and lamp supply the heat during measurement** after freezer power has been switched off. Normal operation never enables camera and freezer simultaneously. In the reviewed code the lamp is on during sweep captures and off between them, so its heating contribution is intermittent; the camera stays powered and streams between sweeps when keepalive is enabled. This describes the actual warming mechanism without implying a controlled heating rate or a continuously illuminated lamp. Routine camera shutdown is by cutting its power, as confirmed by the owner. [Owner review R2](#doc-10-sources-and-maintenance-r2-owner-review-and-component-photos-29-october-2026), [sweep lamp sequence](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/run_single_sweep_remote.py#L301).
+
+In the usual probe arrangement, probes **1–3 measure the outer shell** (non-computer side, computer/hot side, and the side between them). Probe **4 is on the upper/camera-facing tray surface** and probe **5 is underneath the same tray**, both away from camera/lamp heat sources. Thus the usual pre-cool/end condition is based on **tray-underside temperature**, not a direct camera-core or free-air reading. Placements can change by test and the actual map must be recorded. [Usual probe map](#doc-02-hardware-and-connections-thermocouple-channels).
+
 The runner does not command a controlled heating rate, establish thermal equilibrium at setpoints, or check humidity. These distinctions are central to interpreting temperature-associated measurements. See [running the test](#doc-04-running-the-test), [review gaps](#doc-09-review-questions-and-gaps), and [pre-cool code](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/run_long_test.py#L330).
 
 <a id="doc-01-purpose-and-system-overview-what-the-analysis-can-answer"></a>
@@ -168,7 +177,7 @@ The historical camera construction details in [project context](#doc-08-project-
 <a id="doc-02-hardware-and-connections-hardware-and-connections"></a>
 # Hardware and connections
 
-Status: owner review updated 27 October 2026; original source snapshot 23 October 2026. Component identities and arrangement supplied in the [27 October owner review](#doc-10-sources-and-maintenance-r1-owner-review-27-october-2026) are distinguished below from software settings and generic manufacturer specifications. This is not yet an as-built wiring drawing. Physical probe locations, remaining part numbers, actual supply wiring and optical geometry still require review.
+Status: owner review updated 29 October 2026; original source snapshot 23 October 2026. The [27 October component review](#doc-10-sources-and-maintenance-r1-owner-review-27-october-2026) and [29 October owner descriptions and photographs](#doc-10-sources-and-maintenance-r2-owner-review-and-component-photos-29-october-2026) establish the identities and usual arrangement below. Software settings, photographed nameplate ratings and generic manufacturer specifications are distinguished from one another. The remaining wiring allocation and dimensions still need an as-built drawing.
 
 <a id="doc-02-hardware-and-connections-system-arrangement"></a>
 ## System arrangement
@@ -208,16 +217,18 @@ The diagram is a logical interface map. It does not specify load-side power wiri
 | Host PC | Python programs coordinate tests, store data, run analysis and Streamlit comparison views. | Machine identity, operating-system version, interface configuration, environment/package versions, backup location. |
 | Camera and embedded computer | Owner identifies the Qtec Hypervision family, with variations tested rather than one fixed hardware revision. SSH control, `/dev/video4`, V4L2 and GStreamer are implemented. | Per-test camera/revision identity, sensor, serial number, firmware/driver versions, optics, TEC hardware and setpoint. |
 | MCC temperature and digital-I/O unit | Owner supplies Digilent/MCC **E-TC**, part **6069-410-025**. Ethernet `uldaq` access; eight configured thermocouple channels and `AUXPORT0` bit I/O. | Serial number, terminal map, common/reference connections and calibration status. |
-| Thermocouples and extension | Owner supplies **Omega 5SRTC-TT-KI-36-1M** thermocouples and **Labfacility XF-1275-FAR** KX extension wire. Channels 0–4 enabled as type K. | Attachment methods, physical positions, actual extension lengths, connector counterpart model, reference measurements and uncertainty. |
-| Tic controller and stepper motor | Owner identifies **Pololu 3132, Tic T834**, and a **NEMA 17** motor. Controlled with `ticcmd`. | Exact motor part number/electrical rating, serials, actual controller supply, winding wiring and mechanical drive ratio. NEMA 17 does not identify a specific motor model. |
+| Thermocouples and extension | **Omega 5SRTC-TT-KI-36-1M**, **Labfacility XF-1275-FAR** KX extension and owner-linked **Omega DRTB-2 series** DIN-rail thermocouple terminal blocks. Usual five-probe positions are documented below. | Exact fitted terminal-block calibration suffix, attachment details, installed extension lengths, reference measurements and uncertainty. |
+| Tic controller and stepper motor | **Pololu 3132, Tic T834** and NEMA 17 motor labelled **SY42STH38-1684B**. Owner confirms 5 V controller supply; `ticcmd` controls motion. | Motor electrical datasheet, winding wiring, serial/lot record and mechanical drive ratio. |
 | Filterwheel and Hall home sensor | Owner confirms sensor on the fixed base and magnet on the rotating part; supplied datasheet identifies Honeywell **SL353 series**, with HT/LT variants. Four configured measurement positions and active-low Hall logic. Six CAD meshes are preserved below. | Exact HT/LT suffix, fitted supply/interface circuit, physical datum, assembled dimensions and optical alignment. |
 | Filters | Owner identifies **Thorlabs FBH780-3**, **FLH1064-3** and **FBH1550-4**, plus the open position. Nominal wavelengths/widths agree with analysis configuration. | Per-unit transmission data/certificates, orientation, installed mounting and serial/lot records. |
-| Illumination | Lamp controlled by DIO bit 0; software waits 2 s before sweep capture. | Lamp/source type, spectrum, power supply, warm-up stability, positioning, optical path and switching interface. |
-| Freezer and contactor | DIO bit 3 controls freezer enable; automated pre-cool followed by freezer-off measurement. | Freezer model, compressor/controller details, contactor and coil ratings, temperature limits and physical wiring. |
-| Camera power relay | DIO bit 2 controls camera power; 45 s boot wait configured. | Relay specification, load-side voltage/current, power-supply topology, switching behavior and actual boot requirement. |
-| Camera mounting, grating and target | Analysis expects spectral lines and a central dark vertical line; local notes mention a “PC Grating Holder.” User chat describes an Offner arrangement and the materials listed below. | Complete optical/mechanical drawing, grating properties, target description, distances, orientation and confirmation that the historical build is still current. |
+| Illumination | Box reference **641840875**, **24–28 V, 100 W, 118 mm R7S ECO HALOGEN**; owner describes silver-coated parabolic reflector focusing the light. DIO bit 0 switches the lamp, with 2 s configured capture delay. | Brand, installed operating voltage/current, spectral output, optical alignment/distances and measured warm-up stability. |
+| Freezer and contactor | **Tefcold UF400V** freezer; photographed **Allen-Bradley 100-C09E\*400, Series A** contactor marking. DIO bit 3 controls freezer enable; freezer is off during measurement. | Exact contactor coil suffix/rating, load-side wiring and compressor/controller operating requirements. The printed asterisk is not a resolved coil code. |
+| Switching relays | Three photographed **Schneider Electric SSD1D520BDC1** solid-state relays. Software switches lamp, camera power and freezer control through DIO. | Mapping of each physical relay to its load, contactor-coil circuit and exact terminal wiring. |
+| DC supplies | **Mean Well XDR-240E-24**, **NDR-120-24** and **MDR-40-5**; label ratings and owner-confirmed rails are recorded below. | Which named 24 V supply feeds lamp, camera and contactor coil; as-built protection and common/reference wiring. |
+| Ethernet switch | **Telenty industrial switch**, labelled **5 × 10/100/1000 Mbps**, **DC 5 V 1 A**. | Exact model is hidden by cabling; port allocation. |
+| Camera mounting, grating and target | Camera stands on the aluminium tray inside the freezer. Owner describes white **PTFE** target with black **3D-printed cage**, plus the Offner construction below. | Dimensioned optical/mechanical drawing, cage material, grating properties, distances and orientation. |
 
-Sources: [camera defaults](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Camera_scripts/camera_config.py#L2), [DAQ interface](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Control/temperature_control.py#L12), [temperature configuration](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Config/temperature_config.py#L8), [system motion and I/O settings](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Config/system_config.py#L1), [filter identities](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Config/analysis_config.py#L12), [target analysis setup](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Config/analysis_config.py#L41), [local metadata](../reference/local_config_snapshot.txt#L66).
+Sources: [29 October review](#doc-10-sources-and-maintenance-r2-owner-review-and-component-photos-29-october-2026), [component photograph inventory](../reference/component-photos/README.md), [camera defaults](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Camera_scripts/camera_config.py#L2), [DAQ interface](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Control/temperature_control.py#L12), [temperature configuration](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Config/temperature_config.py#L8), [system motion and I/O settings](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Config/system_config.py#L1), [filter identities](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Config/analysis_config.py#L12), [target analysis setup](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Config/analysis_config.py#L41), [local metadata](../reference/local_config_snapshot.txt#L66).
 
 <a id="doc-02-hardware-and-connections-manufacturer-specifications-and-their-limits"></a>
 ### Manufacturer specifications and their limits
@@ -226,7 +237,18 @@ The owner's camera description is approximately **400–1700 nm**. Qtec's public
 
 Digilent identifies **6069-410-025** as **MCC E-TC**, with eight thermocouple inputs, 24-bit conversion, maximum 4 samples/s/channel and eight digital I/O. These are device capabilities, not the project's logging cadence or whole-chain accuracy. The code's logger requests a nominal 1 s interval. [Digilent E-TC product page](https://digilent.com/shop/mcc-e-tc-thermocouple-measurement-ethernet-daq-device/), [logger interval](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Control/temperature_logger.py#L21).
 
-Pololu identifies item **3132** as the **Tic T834 with soldered connectors**, using a DRV8834 driver. Its manufacturer supply range is **2.5–10.8 V**, with approximately **1.5 A continuous per phase** without additional cooling. The actual installed supply voltage remains unrecorded. The separate 24 V camera/contactor comment below does not establish a supply connection to this controller. [Pololu 3132](https://www.pololu.com/product/3132).
+Pololu identifies item **3132** as the **Tic T834 with soldered connectors**, using a DRV8834 driver. Its manufacturer supply range is **2.5–10.8 V**, with approximately **1.5 A continuous per phase** without additional cooling. The owner confirms that the installed controller uses the **5 V rail**. The 24 V camera/contactor circuit is a separate supply arrangement. The photographed board also carries the **Tic T834** marking. [Pololu 3132](https://www.pololu.com/product/3132), [board photograph](../reference/component-photos/IMG_5290.jpg), [29 October review](#doc-10-sources-and-maintenance-r2-owner-review-and-component-photos-29-october-2026).
+
+<a id="doc-02-hardware-and-connections-chamber-illumination-and-thermal-arrangement"></a>
+## Chamber, illumination and thermal arrangement
+
+The **Tefcold UF400V** nameplate shows **230 V, 50 Hz, 300 W, 2.5 A**, net volume **249 L**, and **R290 refrigerant, 80 g**. These are photographed appliance ratings, not measured running power or a verified chamber temperature specification. The camera sits on the **top face of an aluminium tray inside the freezer**; camera power and Ethernet leads and the thermocouple terminal bank are visible in the chamber photograph. [Freezer nameplate](../reference/component-photos/IMG_5293.jpg), [chamber arrangement](../reference/component-photos/IMG_5292.jpg), [owner review](#doc-10-sources-and-maintenance-r2-owner-review-and-component-photos-29-october-2026).
+
+The owner identifies the optical test target as **white PTFE with a black 3D-printed cage**. A **silver-coated parabolic reflector** focuses the lamp's light. The lamp box is labelled **641840875, 24–28 V, 100 W, 118 mm R7S, ECO HALOGEN, 900 lm, 2000 h**; its brand is not visible. Lumens and service life are packaging ratings, not measured irradiance, spectrum or stability at the target. [Lamp packaging](../reference/component-photos/IMG_5295.jpg), [owner review](#doc-10-sources-and-maintenance-r2-owner-review-and-component-photos-29-october-2026).
+
+During the owner's normal test, the freezer cools with the camera off. At the cold threshold the freezer switches off, then camera power is enabled. **Heat from the camera and lamp warms the chamber toward the endpoint**; there is no dedicated controlled heater or commanded warming ramp in the supplied runner. The lamp is powered during sweep capture and switched off afterward, while the camera remains on between sweeps. The owner states that camera and freezer are never intentionally powered together during a normal run and accepts direct camera power removal as the normal shutdown method. This describes the test's operating practice, not a new guarantee from the power-switching hardware. [Pre-cool and camera start](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/run_long_test.py#L330), [lamp sequence](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/run_single_sweep_remote.py#L299), [owner review](#doc-10-sources-and-maintenance-r2-owner-review-and-component-photos-29-october-2026).
+
+Two dishes of orange beads, apparently desiccant, are visible below the tray. The photograph establishes their presence; it does not establish material identity, dryness, humidity achieved, regeneration procedure or condensation prevention. [Chamber photograph](../reference/component-photos/IMG_5292.jpg).
 
 <a id="doc-02-hardware-and-connections-optical-and-mechanical-setup-reported-in-project-chats"></a>
 ## Optical and mechanical setup reported in project chats
@@ -235,7 +257,7 @@ In the 31 August 2026 project discussion, the user described an **Offner setup**
 
 The same user description identifies an unspecified **Loctite superglue** for the grating and **Casco SuperFix+** for the mirror-to-top-plate bond. Exact Loctite product, bond thickness/geometry, cure conditions, substrate preparation and resulting thermal/mechanical properties are not documented. This is evidence of adhesive choices reported for that build; it does not establish whether a later build changed them. No adhesive material constants have been inferred from product names. [Project context](#doc-08-project-context), [retrieved chat source T2](#doc-10-sources-and-maintenance-t2-freezer-camera-drift-analysis).
 
-Other retrieved user discussion reports the freezer fan running during cooling, thermocouples and 24 V wiring, and prior condensation. The available discussion does not establish a complete current fan wiring/control circuit, humidity measurement, or an installed drying solution. Previously proposed condensation remedies are not treated as fitted hardware. See [the retrieved project context](#doc-08-project-context) for source limits and historical discussion.
+Other retrieved user discussion reports the freezer fan running during cooling, thermocouples and 24 V wiring, and prior condensation. A chamber fan and the apparent desiccant dishes are visible in the later photograph, but no humidity measurement or validated drying procedure has been supplied. Previously proposed remedies are not automatically treated as installed measures. See [project context](#doc-08-project-context) and [chamber photograph](../reference/component-photos/IMG_5292.jpg).
 
 <a id="doc-02-hardware-and-connections-network-and-device-interfaces"></a>
 ## Network and device interfaces
@@ -267,30 +289,40 @@ The camera and freezer active levels are configurable; their off levels are calc
 
 The recorded `lamp_state`, `freezer_state`, and `camera_power_state` represent the program's commanded state. There is no separate feedback measurement in this controller proving that the relay operated, power reached the load, the lamp emitted light, or the compressor ran. [State fields and readings](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Control/temperature_control.py#L199).
 
-<a id="doc-02-hardware-and-connections-shared-supply-and-sequencing-caveat"></a>
-### Shared supply and sequencing caveat
+<a id="doc-02-hardware-and-connections-power-supplies-and-switching-arrangement"></a>
+### Power supplies and switching arrangement
 
-A comment in the calibration program states that the freezer contactor uses the camera 24 V supply and that camera and freezer should not be enabled together. That program turns the freezer off before enabling camera power. Treat this as a recorded design constraint requiring confirmation against the actual wiring. The low-level `camera_power_on()` and `freezer_on()` methods do not implement a mutual interlock; the normal long-test pre-cool sequence provides sequencing at a higher level. [Calibration comment and action](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/calibrate_filterwheel.py#L181), [low-level outputs](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Control/temperature_control.py#L116), [pre-cool sequencing](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/run_long_test.py#L330).
+The supply photograph establishes three installed Mean Well models and their label outputs:
+
+- **XDR-240E-24:** 24 V, 10 A, 240 W maximum label marking; adjustment marking 24–29 VDC.
+- **NDR-120-24:** 24 V, 5 A label output, equivalent to 120 W nominal.
+- **MDR-40-5:** 5 V, 6 A label output. Do not interpret the “40” in its model name as the photographed 5 V unit's output power.
+
+The owner confirms that the **5 V rail powers the small devices: MCC unit, Tic controller, network switch and Hall sensor**. Two separate 24 V supplies are fitted because lamp turn-on inrush previously caused a brief camera reset when supply power was shared. The owner reports separating the lamp supply from other power, but the exact assignment of **XDR versus NDR to lamp, camera and freezer-contactor coil** is still to be labelled in a wiring drawing. The freezer itself is a 230 V appliance; a 24 V contactor-control supply is not its mains load supply. [Supply photograph](../reference/component-photos/IMG_5285.jpg), [freezer nameplate](../reference/component-photos/IMG_5293.jpg), [owner review](#doc-10-sources-and-maintenance-r2-owner-review-and-component-photos-29-october-2026).
+
+The panel contains **three Schneider Electric SSD1D520BDC1 SSRs** and an **Allen-Bradley contactor marked 100-C09E\*400, Series A**. Photographs identify the hardware but do not map the individual SSRs to DIO/load functions or resolve the contactor coil option represented by the printed asterisk. [SSR photograph](../reference/component-photos/IMG_5286.jpg), [contactor photograph](../reference/component-photos/IMG_5287.jpg).
+
+A calibration-code comment states that the freezer contactor uses the camera 24 V supply and turns the freezer off before camera power on. The owner independently confirms the normal camera/freezer exclusion sequence. The low-level `camera_power_on()` and `freezer_on()` methods do not implement a mutual interlock; normal pre-cool sequencing is enforced higher in the test program. Retain the code comment as source context while completing the actual labelled supply/load map. [Calibration sequence](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/calibrate_filterwheel.py#L181), [low-level outputs](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Control/temperature_control.py#L116), [pre-cool sequencing](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/run_long_test.py#L330).
 
 <a id="doc-02-hardware-and-connections-thermocouple-channels"></a>
 ## Thermocouple channels
 
 The owner identifies the thermocouples as **Omega 5SRTC-TT-KI-36-1M**. Omega lists that exact model as type K, **36 AWG / approximately 0.13 mm wire diameter**, **PFA insulation**, and **1 m lead length**; the 5SRTC style includes a miniature thermocouple plug and strain relief. These product details do not establish the physical placement or calibration of any particular probe. [Omega IEC series and exact model listing](https://www.jp.omega.com/pptst/5LSC_5SRTC_IEC.html).
 
-The owner confirms that the thermocouple connectors are **inside the freezer**, extended outside with **Labfacility XF-1275-FAR** KX wire, [Farnell order reference 2918721](https://dk.farnell.com/labfacility/xf-1275-far/thermocouple-wire-type-kx-10m/dp/2918721). This identifies extension wire, not a separate connector product. The exact mating/extension connector model has not yet been supplied; do not infer it from the cable reference or the probe's included plug. Actual installed extension lengths and termination details remain to be recorded. [Owner review](#doc-10-sources-and-maintenance-r1-owner-review-27-october-2026).
+The thermocouple connectors are **inside the freezer**, extended outside with **Labfacility XF-1275-FAR** KX wire, [Farnell order reference 2918721](https://dk.farnell.com/labfacility/xf-1275-far/thermocouple-wire-type-kx-10m/dp/2918721). The owner now identifies the DIN-rail terminal blocks through the **Omega DRTB-2 series** product link. That series has screw terminals and a built-in miniature female thermocouple connector, with variants for K, J and other thermocouple types. Type K is used in this test, but an exact fitted SKU such as **DRTB-K-2** has not been read from a label and should not be assumed solely from the series link. The terminal bank and plug connections are visible in the chamber. Actual extension lengths and termination details remain to be recorded. [Omega DRTB-2 series](https://www.dwyeromega.com/en-nl/thermocouple-din-rail-terminal-blocks-narrow-10-7-mm-width/p/DRTB-2), [chamber photograph](../reference/component-photos/IMG_5292.jpg), [owner review](#doc-10-sources-and-maintenance-r2-owner-review-and-component-photos-29-october-2026).
 
 | MCC channel | Logical probe name | Thermocouple type | Enabled in supplied configuration | Physical placement |
 |---:|---|---|---|---|
-| 0 | `probe_1` | K | Yes | Unconfirmed |
-| 1 | `probe_2` | K | Yes | Unconfirmed |
-| 2 | `probe_3` | K | Yes | Unconfirmed |
-| 3 | `probe_4` | K | Yes | Unconfirmed |
-| 4 | `probe_5` | K | Yes | Unconfirmed; used for current pre-cool and measurement endpoint |
+| 0 | `probe_1` | K | Yes | Camera outer case on the side without the computer. |
+| 1 | `probe_2` | K | Yes | Camera outer case on the computer side, described by the owner as the hot side. |
+| 2 | `probe_3` | K | Yes | Side of the camera between the above two sides. |
+| 3 | `probe_4` | K | Yes | Top, camera-facing surface of the aluminium tray, away from camera and lamp. |
+| 4 | `probe_5` | K | Yes | Underside of the same tray, away from heat sources; normal pre-cool and measurement-end reference. |
 | 5 | `probe_6` | K | No | Unconfirmed |
 | 6 | `probe_7` | K | No | Unconfirmed |
 | 7 | `probe_8` | K | No | Unconfirmed |
 
-Source: [channel map](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Config/temperature_config.py#L12). Probe names are generic identifiers. Do not label a probe “ambient,” “grating,” “camera housing,” or similar until its actual placement is confirmed.
+Sources: [channel map](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Config/temperature_config.py#L12), [29 October owner placement description](#doc-10-sources-and-maintenance-r2-owner-review-and-component-photos-29-october-2026). These are the **usual placements**, which may change with test configuration. Record exceptions with each run. Probes 1–3 measure case surfaces; probes 4–5 measure tray surfaces. In particular, `probe_5` is not a direct chamber-air or internal-optics temperature measurement. Its selected role as the endpoint sensor is a protocol choice.
 
 The owner reports **5 °C at probe 5** as the normal cold threshold and explains that **12 °C** was used recently to shorten testing. The archived local configuration contains 12 °C. These are protocol choices, not probe specifications or verified temperatures of the optics; retain the actual selected threshold with each test. [Owner review](#doc-10-sources-and-maintenance-r1-owner-review-27-october-2026), [configuration snapshot](../reference/local_config_snapshot.txt#L27).
 
@@ -322,6 +354,8 @@ The exact fitted **HT/LT suffix remains unknown**: the nominal sampling periods 
 Six supplied STL files are preserved in the [filterwheel CAD inventory](../reference/filterwheel-cad/README.md), with a preview below. The meshes provide mechanical reference; their assembled roles, exact current-build correspondence and dimensions should be established from the inventory and owner review rather than guessed from filenames or this preview.
 
 ![Independent views of the six supplied filterwheel CAD meshes](../assets/filterwheel-cad-overview.png)
+
+The motor's photographed label resolves the earlier generic NEMA 17 identity to **SY42STH38-1684B**. The label does not give phase current, winding resistance or step angle, so those values are not inferred from the suffix. [Motor photograph](../reference/component-photos/IMG_5289.jpg).
 
 Current coordinator settings are step mode `8`, current limit `1500 mA`, max speed `4000000`, starting speed `0`, max acceleration/deceleration `40000`, position tolerance `5`, settle time `0.2 s`, and move timeout `10 s`. Speed and acceleration numbers are passed directly to `ticcmd`; this knowledge base does not convert their units without the actual controller documentation. Class constructor defaults differ from the coordinator configuration, so use the passed configuration when interpreting production behavior. [Configured values](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Config/system_config.py#L10), [driver constructor](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Control/filterwheel_control.py#L13), [coordinator passes settings](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/run_single_sweep_remote.py#L241).
 
@@ -361,15 +395,14 @@ The camera-side code states that this camera's sensor-temperature control update
 <a id="doc-02-hardware-and-connections-hardware-information-to-add-during-review"></a>
 ## Hardware information to add during review
 
-1. Annotated overview photograph, optical-path sketch and a dimensioned mounting arrangement.
-2. Per-test camera/revision and serial records; MCC/controller serials; exact NEMA 17 motor model and SL353HT/LT suffix; remaining freezer, lamp, supply, relay and contactor identities/manuals.
-3. Wiring drawing with connector/terminal numbers, logic references, supply sharing and load-side switching.
-4. Photograph and location description for each `probe_1` through `probe_5`, including what surface or medium it measures and how it is attached.
-5. Individual filter transmission certificates/lot records; target description; grating, lens and holder details.
-6. Temperature calibration/uncertainty evidence, wheel alignment/repeatability check, illumination stabilization evidence and camera exposure-control units.
-7. Confirmed operating temperature bounds and the actual camera/TEC initialization and control behavior.
-8. Confirm the historical Offner/material/adhesive/fan description against the present build; record humidity/condensation monitoring and any actually installed mitigation.
-9. Separate connector part numbers and installed extension lengths for the identified Omega probes and Labfacility KX extension wire.
+1. Annotate the supplied chamber photograph with probe labels and optical-path dimensions; record exact attachment details and any run-specific placement changes.
+2. Per-test camera/revision and serial records, MCC/controller serials, SL353HT/LT suffix, motor electrical datasheet, lamp brand, switch model and contactor coil option.
+3. Wiring drawing assigning each named 24 V supply and SSR to its load, with connector/terminal numbers, logic references and load-side switching.
+4. Individual filter transmission certificates/lot records, grating/lens/holder details, target dimensions and cage material.
+5. Temperature calibration/uncertainty evidence, wheel alignment/repeatability check, illumination stabilization evidence and camera exposure-control units.
+6. Confirmed operating temperature bounds and the actual camera/TEC initialization and control behavior.
+7. Confirm the historical Offner/material/adhesive/fan description against the present build; record humidity/condensation monitoring and desiccant handling.
+8. Exact fitted DRTB-2 calibration suffix and installed extension lengths for the identified Omega probes and Labfacility KX extension wire.
 
 ---
 
@@ -379,7 +412,7 @@ The camera-side code states that this camera's sensor-temperature control update
 <a id="doc-03-software-and-configuration-software-and-configuration"></a>
 # Software and configuration
 
-Status: source inspected on 23 October 2026; normal procedure clarified by the owner on 27 October 2026. No hardware-control program was executed to build this documentation. The owner-confirmed normal settings and the earlier copied source profile are distinguished below. [Owner review R1](#doc-10-sources-and-maintenance-r1-owner-review-27-october-2026).
+Status: source inspected on 23 October 2026; normal procedure clarified by the owner on 27 and 29 October 2026. No hardware-control program was executed to build this documentation. The owner-confirmed normal settings and the earlier copied source profile are distinguished below. [Owner review R1](#doc-10-sources-and-maintenance-r1-owner-review-27-october-2026), [owner review R2](#doc-10-sources-and-maintenance-r2-owner-review-and-component-photos-29-october-2026).
 
 The 33 shared Python/shell files in the supplied local copy were verified against repository commit `df4ccebbbd0f41e32f5ae415e967728e5845d56b` dated 12 October 2026 and matched byte for byte. The additional `Config/local_config.py` was preserved as a [historical snapshot](../reference/local_config_snapshot.txt). Its 12 °C pre-cool setting was a deliberate shorter trial; normal pre-cool uses `probe_5` at **5 °C**. Reproducing that old profile and preparing a normal run are different configuration choices. See [source provenance and maintenance](#doc-10-sources-and-maintenance) and [owner review R1](#doc-10-sources-and-maintenance-r1-owner-review-27-october-2026).
 
@@ -460,14 +493,23 @@ The table retains the earlier source profile for provenance. “Base” means th
 
 The implemented sequence keeps camera power off during pre-cool, switches the freezer off at the threshold, waits the settle period, and then switches camera power on for the configured 45 s boot wait. There is no camera warm-start feature in the reviewed runner. [Implemented pre-cool](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/run_long_test.py#L330), [implemented power-on](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/run_long_test.py#L559).
 
+<a id="doc-03-software-and-configuration-thermal-sequence-and-probe-meaning"></a>
+### Thermal sequence and probe meaning
+
+The owner confirms the normal sequence: **freezer on / camera off** while cooling to the 5 °C threshold, then freezer off, the configured 60 s settle, camera on, and its configured 45 s boot wait. The camera and freezer are never on together during normal operation. Heat from the operating camera and the lamp warms the chamber during measurement toward the selected end temperature. This is the intended warm-up mechanism; the runner does not drive a separate heater or command a closed-loop temperature ramp. [Owner review R2](#doc-10-sources-and-maintenance-r2-owner-review-and-component-photos-29-october-2026), [pre-cool and freezer-off](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/run_long_test.py#L330), [camera startup](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/run_long_test.py#L559).
+
+The lamp's contribution is **intermittent in the reviewed software**: each managed sweep switches it on, waits 2 s, captures the configured filter images (normally four), then switches it off. It is not held on throughout the measurement phase. The owner's camera-and-lamp thermal description therefore does not imply continuous lamp power in this source revision. [Lamp sequence](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/run_single_sweep_remote.py#L299), [lamp off](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/run_single_sweep_remote.py#L344).
+
+The usual `probe_5` placement is on the underside of an aluminium tray in the upper freezer, away from camera and lamp heat; `probe_4` is on the camera-facing top of that tray. Probes 1–3 are on the camera case. These placements can change between tests, so record the actual map rather than treating a probe label as a permanent physical quantity. In particular, `probe_5` is not a free-air or camera-core reading. See [the usual probe map](#doc-02-hardware-and-connections-thermocouple-channels) and [operator preparation](#doc-04-running-the-test-operator-preparation). [Owner review R2](#doc-10-sources-and-maintenance-r2-owner-review-and-component-photos-29-october-2026).
+
 <a id="doc-03-software-and-configuration-other-control-recovery-and-timing-settings"></a>
 ### Other control, recovery and timing settings
 
 | Setting group | Current value or behavior | Source |
 |---|---|---|
-| Camera power control | Enabled; active-high DIO bit 2; 45 s boot wait; end-of-test off flag enabled. | [System settings](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Config/system_config.py#L34) |
+| Camera power control | Enabled; active-high DIO bit 2; 45 s boot wait; end-of-test off flag enabled. Removing camera power is the owner-confirmed routine shutdown method. | [System settings](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Config/system_config.py#L34), [owner review R2](#doc-10-sources-and-maintenance-r2-owner-review-and-component-photos-29-october-2026) |
 | Freezer control | Enabled; active-high DIO bit 3. Duplicate base declarations have the same values. | [System settings](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Config/system_config.py#L51) |
-| Lamp capture delay | 2 s after lamp-on; lamp then remains on for the sweep's image loop. | [Setting](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Config/system_config.py#L159), [sequence](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/run_single_sweep_remote.py#L299) |
+| Lamp capture delay | 2 s after lamp-on; lamp stays on for the sweep's image loop and switches off afterward. It is off between managed sweeps. | [Setting](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Config/system_config.py#L159), [sequence](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/run_single_sweep_remote.py#L299), [off](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/run_single_sweep_remote.py#L344) |
 | Acquisition retry | 30 s retry delay; maximum consecutive failures 3. | [Settings](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Config/system_config.py#L142) |
 | Storage threshold | 5 GiB (`1024**3` bytes per unit) free-space threshold on the local output filesystem. | [Setting](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Config/system_config.py#L146), [check](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/run_long_test.py#L73) |
 | Automatic camera recovery | Enabled; up to 3 per test; camera off wait 15 s, then boot wait and keepalive restoration. Triggered by recognized capture-error strings. | [Settings](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Config/system_config.py#L41), [implementation](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/run_long_test.py#L185) |
@@ -553,10 +595,10 @@ Sources: [preflight main](https://github.com/JcpeNewtec/FreezerTest/blob/df4cceb
 2. Select the intended local results path and confirm it is writable on the host actually running tests.
 3. Confirm current camera identity/operator/notes rather than carrying them into every future run unchanged. Their supplied values describe one configured run context.
 4. Check the normal `probe_5` pre-cool threshold of 5 °C; retain deliberate trial departures as explicitly identified run settings.
-5. Confirm shared-supply sequencing, actual compressor limits and whether protections should be enforced centrally.
+5. Map the two 24 V supplies and individual relays to their loads/terminals; record actual compressor limits and whether protections should be enforced centrally.
 6. Record exposure-control units/range, controller motion units and required current against the actual hardware.
 7. Choose the maintained Streamlit entry point; preserve historical repair tools as explicitly manual utilities.
-8. Record the approved physical probe map, then keep probe names and end-condition settings aligned with it.
+8. Record actual per-run probe placement and any departure from the usual map. Keep probe names and end-condition settings aligned with that record; the usual `probe_5` is a tray-underside measurement, not camera core or free air. [Owner review R2](#doc-10-sources-and-maintenance-r2-owner-review-and-component-photos-29-october-2026).
 9. Verify/calibrate filter positions before each run and manually focus on the target plane whenever the camera is changed. These are owner-confirmed preparation tasks; preflight does not perform them. [Owner review R1](#doc-10-sources-and-maintenance-r1-owner-review-27-october-2026), [operating preparation](#doc-04-running-the-test-operator-preparation).
 
 ---
@@ -567,12 +609,12 @@ Sources: [preflight main](https://github.com/JcpeNewtec/FreezerTest/blob/df4cceb
 <a id="doc-04-running-the-test-running-the-freezer-test"></a>
 # Running the freezer test
 
-This chapter combines the reviewed source behavior with the owner's operating clarifications of 27 October 2026. Normal pre-cool uses **`probe_5` at 5 °C**. Filter positions are verified/calibrated before each run, and focus is adjusted manually to the target plane when the camera changes. Remaining apparatus details and environmental recovery procedures still need review. Individual test results are outside this knowledge base. [Owner review R1](#doc-10-sources-and-maintenance-r1-owner-review-27-october-2026).
+This chapter combines the reviewed source behavior with the owner's operating clarifications of 27 and 29 October 2026. Normal pre-cool uses **`probe_5` at 5 °C**. The freezer cools with the camera off; afterward the freezer is off while camera heat and intermittent lamp operation warm the chamber during measurement. Filter positions are verified/calibrated before each run, and focus is adjusted manually to the target plane when the camera changes. Individual test results are outside this knowledge base. [Owner review R1](#doc-10-sources-and-maintenance-r1-owner-review-27-october-2026), [owner review R2](#doc-10-sources-and-maintenance-r2-owner-review-and-component-photos-29-october-2026).
 
 <a id="doc-04-running-the-test-what-a-run-does"></a>
 ## What a run does
 
-The main entry point is `Scripts/run_long_test.py`. For each configured repeat it creates a separate test folder, starts continuous MCC temperature logging, pre-cools the freezer to a probe threshold, turns the freezer off, starts the camera and optional continuous stream, collects periodic filter sweeps, and shuts down the controlled outputs. The next repeat starts a fresh pre-cool cycle. The freezer is **not actively regulated during the measurement phase** by this runner. [Sources: run setup](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/run_long_test.py#L441), [pre-cool](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/run_long_test.py#L287), [measurement startup](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/run_long_test.py#L537), [repeat loop](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/run_long_test.py#L1025).
+The main entry point is `Scripts/run_long_test.py`. For each configured repeat it creates a separate test folder, starts continuous MCC temperature logging, pre-cools with the camera off, turns the freezer off, starts the camera and optional continuous stream, collects periodic filter sweeps, and shuts down the controlled outputs. The next repeat starts a fresh pre-cool cycle. **The camera and freezer are never on together in normal operation.** During measurement the freezer stays off; heat from the camera and lamp warms the chamber toward the end-temperature condition. The runner commands no separate heater or closed-loop temperature ramp. [Owner review R2](#doc-10-sources-and-maintenance-r2-owner-review-and-component-photos-29-october-2026), [run setup](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/run_long_test.py#L441), [pre-cool](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/run_long_test.py#L287), [measurement startup](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/run_long_test.py#L537), [repeat loop](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/run_long_test.py#L1025).
 
 ```text
 Initialize folder and logger
@@ -581,12 +623,13 @@ Initialize folder and logger
   → Pre-cool threshold reached; freezer off; timed settle
   → Camera on; boot wait; keepalive stream if enabled
   → Measurement clock starts
+  → Camera heat + sweep-switched lamp warm the chamber
   → Sweep → wait interval → sweep … until end condition/stop/failure
   → Stop stream; freezer off; lamp off; camera off; stop logger
   → Inter-repeat delay → next repeat
 ```
 
-The diagram represents the normal path when the relevant control features are enabled. Normal pre-cool ends when `probe_5` reaches **5 °C or below**. Pre-cooling can be skipped by configuration, sweeps can fail, and stop requests or timeouts can interrupt the path. [Owner review R1](#doc-10-sources-and-maintenance-r1-owner-review-27-october-2026).
+The diagram represents the normal path when the relevant control features are enabled. Normal pre-cool ends when `probe_5` reaches **5 °C or below**. The lamp is on for each sweep's 2 s warm-up and image loop, then off between sweeps; it is not continuously on during the thermal warm-up phase. Pre-cooling can be skipped by configuration, sweeps can fail, and stop requests or timeouts can interrupt the path. [Owner review R1](#doc-10-sources-and-maintenance-r1-owner-review-27-october-2026), [lamp control](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/run_single_sweep_remote.py#L299).
 
 <a id="doc-04-running-the-test-configuration-to-review-before-starting"></a>
 ## Configuration to review before starting
@@ -629,9 +672,23 @@ Also check camera identity, operator, notes, filter positions, and exposures. Th
 2. **Whenever the camera is changed, manually focus it on the target plane.** Focus is an operator adjustment; the acquisition code does not perform autofocus.
 3. **Before every run, verify/calibrate the filter positions.** The owner reports that the motor's internal reference may drift. Hall homing supplies a home reference during managed sweeps, but does not replace this per-run optical-position verification.
 4. Use the calibration interface as needed, then ensure the reviewed positions are in the effective `FILTER_POSITIONS` configuration. `calibrated_filter_positions.json` is not loaded automatically by the test runner.
-5. Check the intended pre-cool threshold, camera identity/operator/notes, capture settings, storage path, and stop-file state before the preflight/acquisition sequence.
+5. Record the actual probe positions for this run, including any changes from the usual map below. Confirm which physical measurement is selected for pre-cool and measurement end.
+6. Check the intended pre-cool threshold, camera identity/operator/notes, capture settings, storage path, and stop-file state before the preflight/acquisition sequence.
 
 The manual focus and per-run calibration requirements are owner-confirmed. Their detailed acceptance criteria and adjustment method still need to be recorded. [Owner review R1](#doc-10-sources-and-maintenance-r1-owner-review-27-october-2026), [calibration workflow](#doc-02-hardware-and-connections-calibration-workflow-supported-by-the-code), [calibration save](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/calibrate_filterwheel.py#L207), [runtime position use](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/run_single_sweep_remote.py#L314).
+
+<a id="doc-04-running-the-test-usual-probe-positions"></a>
+### Usual probe positions
+
+| Probe | Usual owner-reported placement |
+|---|---|
+| `probe_1` | Camera case on the side without the computer |
+| `probe_2` | Camera case on the computer side, at the hotter area |
+| `probe_3` | Side of the camera case midway between the non-computer and computer sides |
+| `probe_4` | Camera-facing top surface of an aluminium tray in the upper freezer, away from the camera and lamp |
+| `probe_5` | Underside of the same tray, away from heat sources |
+
+This is the usual arrangement, not a permanent assignment for every experiment. `probe_5` normally measures the tray underside, **not free air or camera core temperature**. A 5 °C threshold at that probe does not establish uniform camera or chamber temperature. Keep the actual run map with the test context so temperature-associated results remain interpretable. [Owner review R2](#doc-10-sources-and-maintenance-r2-owner-review-and-component-photos-29-october-2026).
 
 <a id="doc-04-running-the-test-starting-a-run"></a>
 ## Starting a run
@@ -670,6 +727,8 @@ Successful preflight does not verify optical alignment, correct filter identity,
 7. Only now set `measurement_start_time`, calculate the end deadline, and allow the first sweep immediately.
 
 Sources: [first record](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/run_long_test.py#L266), [pre-cool sequence](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/run_long_test.py#L287), [measurement startup](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/run_long_test.py#L537), [boot wait](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Config/system_config.py#L34), [measurement clock](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/run_long_test.py#L586).
+
+The owner confirms that the operating camera and lamp provide the heat for the measurement warm-up with freezer power off. In the supplied code the camera remains powered during this phase, while the lamp is switched only for sweep capture. No lamp duty-cycle change or extra heater is implied by the thermal description. [Owner review R2](#doc-10-sources-and-maintenance-r2-owner-review-and-component-photos-29-october-2026), [sweep lamp sequence](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/run_single_sweep_remote.py#L299).
 
 There is no explicit probe-freshness limit, stability slope check, or finite-number validation in the threshold helper: it converts the selected value with `float()`. Pre-cool polls the latest available record rather than requiring a new record on each poll. Confirm that logged readings are advancing when interpreting a run. [Sources: conversion helper](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/run_long_test.py#L118), [pre-cool loop](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/run_long_test.py#L352).
 
@@ -745,6 +804,8 @@ Stop files do not interrupt an image capture, transfer, recovery power-cycle, fi
 
 Normal and exception cleanup attempt, in order, keepalive stop, freezer off, lamp off, optional explicit camera off, then logger stop. Output-command failures are recorded or printed. These are attempts through software control, not physical feedback proving contacts opened. The logger's own stop/disconnect path also attempts camera power off, so setting `CAMERA_POWER_OFF_AT_TEST_END=False` does **not** reliably keep the camera on in the supplied implementation. Abrupt process termination, host power loss, or broken communication cannot be assumed to execute cleanup. [Sources: runner cleanup](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/run_long_test.py#L959), [logger stop](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Control/temperature_logger.py#L44), [controller disconnect](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Control/temperature_control.py#L168).
 
+**Routine camera shutdown is by removing its power.** The owner confirms this as the accepted procedure for the rig, matching the relay-based shutdown in the runner. [Owner review R2](#doc-10-sources-and-maintenance-r2-owner-review-and-component-photos-29-october-2026), [camera power-off call](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/run_long_test.py#L988).
+
 Ctrl-C raises `KeyboardInterrupt`, which bypasses the runner's `except Exception` status handlers. Its `finally` cleanup is still attempted, but a saved summary can remain `running` or `precooling` without a terminal status or `end_time`. Use the documented stop-file path for a normal recorded stop; the status left in a folder is not by itself proof that a process is still running. [Exception and cleanup path](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/run_long_test.py#L945).
 
 <a id="doc-04-running-the-test-failures-and-recovery"></a>
@@ -754,7 +815,7 @@ Storage is checked initially and after each attempted sweep against the default 
 
 Ordinary sweep errors increment both failed-attempt count and consecutive failures. The default retry wait is 30 s; afterward the normal post-attempt sweep interval is also scheduled, so ordinary retry timing is longer than 30 s. Three consecutive ordinary failures abort by default. Successful capture resets the streak. [Sources: failure handling](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/run_long_test.py#L853), [rescheduling](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/run_long_test.py#L919), [defaults](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Config/system_config.py#L142).
 
-Automatic camera recovery matches a small set of error strings: required-memory allocation, buffer-pool activation, `VIDIOC_REQBUFS`, and device/resource-busy errors. With recovery enabled, it stops keepalive, forces lamp off, powers **only the camera** off, waits 15 s by default, powers it on, waits 45 s, and restarts keepalive. Freezer/logger/host process remain running. Up to three recoveries per test are configured by default; a successful recovery resets ordinary failure streak and schedules the next numbered sweep immediately. The failed attempt remains a failure; recovery does not recreate that same sweep index. [Sources: markers](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/run_long_test.py#L176), [recovery procedure](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/run_long_test.py#L191), [recovery decision](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/run_long_test.py#L864), [recovery defaults](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Config/system_config.py#L41).
+Automatic camera recovery matches a small set of error strings: required-memory allocation, buffer-pool activation, `VIDIOC_REQBUFS`, and device/resource-busy errors. With recovery enabled, it stops keepalive, forces lamp off, powers **only the camera** off, waits 15 s by default, powers it on, waits 45 s, and restarts keepalive. The MCC logger and host process continue; freezer control is unchanged and the freezer is normally off during measurement. Up to three recoveries per test are configured by default; a successful recovery resets ordinary failure streak and schedules the next numbered sweep immediately. The failed attempt remains a failure; recovery does not recreate that same sweep index. [Sources: markers](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/run_long_test.py#L176), [recovery procedure](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/run_long_test.py#L191), [recovery decision](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/run_long_test.py#L864), [recovery defaults](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Config/system_config.py#L41).
 
 Capture failure can leave images on the camera because transfer/removal happens only after the successful sweep block. Transfer verification checks expected filename existence, not checksums or PNG decodability. A transfer/removal failure can leave a local `sweep_summary.json` already marked `success` while the test-level event records that the attempt failed. Review both levels and file integrity before treating a partial sweep as usable. [Source: summary and transfer ordering](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/run_single_sweep_remote.py#L364).
 
@@ -762,9 +823,8 @@ Capture failure can leave images on the camera because transfer/removal happens 
 ## Physical procedure still to confirm
 
 - Detailed installation checks for the enclosure, target, optics, filters, lamp, camera, thermocouples, and cabling, plus acceptance criteria for manual focus and per-run filter-position verification/calibration.
-- Which physical point each probe measures, particularly `probe_5` used by the copied profile.
-- Whether an additional soak/stability criterion is needed beyond the owner-confirmed normal `probe_5` threshold of 5 °C; none is implemented in the reviewed runner.
-- How the freezer warms during measurement, whether its own thermostat remains relevant, and acceptable ambient conditions.
+- Record any per-run departures from the usual probe map and the detailed attachment/contact method; the usual positions are now owner-confirmed above.
+- Record ambient conditions and any additional thermal influences for each test; the owner-confirmed measurement heat sources are the camera and intermittent lamp operation with freezer power off.
 - The required compressor minimum-off behavior. `FREEZER_MIN_OFF_TIME_S=600` is used by the dedicated relay test script; the long-run `freezer_on()` path does not enforce that delay. [Sources: manual protection setting](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Config/system_config.py#L76), [relay-test wait](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/test_freezer_relay.py#L87), [direct output control](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Control/temperature_control.py#L116).
 - The required response to condensation, an out-of-range sensor, unavailable network, or a command that failed to switch an output. These procedures should come from the actual apparatus and operator experience.
 
@@ -846,6 +906,8 @@ The current runner derives `repeat_group_id` as `<safe_camera_id>_<YYYY-MM-DD>` 
 
 The owner uses the apparatus both for reproducibility across same-type camera units and for investigating design changes. Record a unique unit identity plus its tested revision/configuration, change under investigation, actual pre-cool threshold, verified wheel positions, and manual focus/setup state. Existing `camera_id` and `notes` can carry some of this context, but the runner does not create dedicated structured fields for every item. Do not treat the family name as a unique unit/revision ID or pool different revisions as an unchanged population. [Owner review R1](#doc-10-sources-and-maintenance-r1-owner-review-27-october-2026), [analysis comparisons](#doc-06-analysis-methodology-repeat-cycle-comparison).
 
+Also record the **actual probe-placement map for each test**. The usual arrangement is shell probes 1–3, tray upper surface probe 4 and tray underside probe 5, but the owner can move probes between experiments. The numeric `probe_n` labels alone do not encode placement; the runner does not automatically store the map. Use the existing notes or an accompanying setup record. The PTFE/cage target, focus, halogen/reflector arrangement and camera/lamp-driven warming form part of that setup context. [Owner review R2](#doc-10-sources-and-maintenance-r2-owner-review-and-component-photos-29-october-2026).
+
 <a id="doc-05-data-and-metadata-test-summary-and-event-log"></a>
 ## Test summary and event log
 
@@ -883,7 +945,7 @@ Normal `temperature_log.jsonl` records contain:
 
 Sources: [controller schema](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Control/temperature_control.py#L199), [logger record/write](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Control/temperature_logger.py#L79).
 
-The supplied channel configuration enables K-type `probe_1` through `probe_5` (channels 0–4) and disables probes 6–8. A disabled probe is absent, not a zero-temperature measurement. An enabled probe whose read fails can be absent from `temperatures_c` and present in `errors`. Sensor names alone do not establish physical mounting locations. [Sources: channel configuration](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Config/temperature_config.py#L12), [per-channel read handling](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Control/temperature_control.py#L210).
+The supplied channel configuration enables K-type `probe_1` through `probe_5` (channels 0–4) and disables probes 6–8. A disabled probe is absent, not a zero-temperature measurement. An enabled probe whose read fails can be absent from `temperatures_c` and present in `errors`. The usual physical locations are now described in [the hardware map](#doc-02-hardware-and-connections-thermocouple-channels); sensor labels in a data file still require the actual run's placement record before that map is assumed. [Sources: channel configuration](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Config/temperature_config.py#L12), [per-channel read handling](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Control/temperature_control.py#L210).
 
 If the whole logger iteration raises an exception, an error record has `logger_timestamp`, `logger_status="error"`, and `error`; it need not have normal temperatures or output-state keys. The logger continues attempting reads. The requested interval is 1 s, but sleep happens after reading/writing, so actual spacing includes operation time. The latest record supplied to sweep snapshots can also come from a relay wrapper's `read_all()` and may lack `logger_timestamp`. [Sources: logger loop](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Control/temperature_logger.py#L79), [relay wrappers](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Control/temperature_logger.py#L106).
 
@@ -985,7 +1047,7 @@ The scripts infer membership; they do not recover missing experimental intent. A
 <a id="doc-05-data-and-metadata-provenance-gaps-to-resolve-in-the-next-version"></a>
 ## Provenance gaps to resolve in the next version
 
-The acquisition code does not automatically persist a Git commit, a complete merged configuration snapshot, a hardware serial-number inventory, probe placement/calibration records, a schema version, clock synchronization status, environmental preparation details, or file checksums. Per-filter requests, image readbacks, selected test settings, and events provide useful partial provenance; they do not supply those missing facts. [Sources: test metadata fields](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/run_long_test.py#L464), [sweep fields](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/run_single_sweep_remote.py#L224), [image fields](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Camera_scripts/camera_control.py#L148).
+The acquisition code does not automatically persist a Git commit, a complete merged configuration snapshot, a hardware serial-number inventory, per-run probe placement/calibration records, a schema version, clock synchronization status, environmental preparation details, or file checksums. The usual probe map and photographed component identities are available in this knowledge base, but are not automatically attached to each dataset. Per-filter requests, image readbacks, selected test settings, and events provide useful partial provenance. [Sources: test metadata fields](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/run_long_test.py#L464), [sweep fields](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/run_single_sweep_remote.py#L224), [image fields](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Camera_scripts/camera_control.py#L148).
 
 For a reviewed operating procedure, see [Running the freezer test](#doc-04-running-the-test). Keep raw acquisition folders, later analysis products, and this general knowledge base distinguishable so a local AI can explain methods without treating individual results or stale profile values as universal facts.
 
@@ -997,7 +1059,7 @@ For a reviewed operating procedure, see [Running the freezer test](#doc-04-runni
 <a id="doc-06-analysis-methodology-freezer-test-analysis-methodology"></a>
 # Freezer test analysis methodology
 
-Status: source-derived methodology with owner clarifications from 2026-10-27; remaining validation questions are listed below. Source inspection date: 2026-10-23. This page describes methods and limitations, without reporting individual test results.
+Status: source-derived methodology with owner clarifications through 2026-10-29; remaining validation questions are listed below. Source inspection date: 2026-10-23. This page describes methods and limitations, without reporting individual test results.
 
 <a id="doc-06-analysis-methodology-what-the-analysis-measures"></a>
 ## What the analysis measures
@@ -1016,6 +1078,8 @@ The owner confirmed the filter part identities on 27 October 2026, including **F
 The wavelength and FWHM numbers above are the analysis configuration's nominal values; no measured transmission curve is used by the code. Filter bandwidth in nm is metadata; the implemented measured widths and movements are in image pixels. The analysis does not convert pixel widths to wavelength resolution, remove the finite optical filter bandwidth, or establish a physical distance per pixel. For component descriptions and supplier specifications, see [hardware and connections](#doc-02-hardware-and-connections-filterwheel-filters-and-position-calibration). [Filter mapping](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Config/analysis_config.py#L12), [analysis dispatch and metadata](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/analyze_test_folder.py#L776).
 
 The primary quantities are spectral FWHM, spectral line position, spatial line spread function (LSF) Gaussian FWHM, spatial edge position, no-filter signal level, and dark-region level and spatial variation. Width describes the observed feature's sharpness; position tracks its movement. A change in these observables does not by itself identify which mechanical, optical, illumination, or sensor effect caused it.
+
+The target is white **PTFE**, selected by the owner for its reflectance over the approximately 400–1700 nm range. A black 3D-printed cage over the PTFE produces the sharp dark lines used as spatial features. A halogen tube and silver-coated parabolic reflector focus illumination onto the target. These are owner-confirmed construction and selection details; no measured reflectance curve, calibrated Lambertian response, or quantified target-edge quality has been supplied. The analysis does not divide by a calibrated white reference or remove the target's edge response from the measured spatial width. [Owner review R2](#doc-10-sources-and-maintenance-r2-owner-review-and-component-photos-29-october-2026).
 
 <a id="doc-06-analysis-methodology-image-coordinates-and-current-regions-of-interest"></a>
 ## Image coordinates and current regions of interest
@@ -1040,6 +1104,8 @@ Images are loaded through Pillow into floating-point arrays. The analysis expect
 | `noise_2` | `[200, 680)` | `[540, 620)` | Background statistics in the 1550 nm filtered image |
 
 Source: [spatial region](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Config/analysis_config.py#L41), [spectral regions](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Config/analysis_config.py#L79), [signal and noise regions](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Config/analysis_config.py#L98). These coordinates describe the supplied configuration, not a permanent alignment standard. Verify them on images after changes to camera framing, optical alignment, or sensor format. The crop helper does not validate boundaries; NumPy may silently truncate an out-of-bounds crop.
+
+Check that the fixed spatial ROI crosses the intended cage-produced dark line against the white PTFE in the current framing. Also check that the signal regions sample the intended illuminated target areas and that the spectral and background regions remain suitable. Knowing the target construction does not establish that these fixed pixel coordinates select the intended features on every camera or after a focus/alignment change. [Target description and usual setup](#doc-10-sources-and-maintenance-r2-owner-review-and-component-photos-29-october-2026).
 
 The owner verifies the wheel positions before every long test and adjusts manual focus when the camera is changed. Record those setup checks with the run and inspect the analysis regions after a camera change. Focus or framing changes can affect width and position comparisons even when the analysis code is unchanged. The offline analyzer does not verify that these manual checks occurred. [Owner review](#doc-10-sources-and-maintenance-r1-owner-review-27-october-2026).
 
@@ -1194,6 +1260,20 @@ Configured deltas cover spectral FWHM, spectral quadratic peak position, spatial
 
 `temp_<probe-name>_c` fields come from `sweep_summary.json / temperature_before_sweep / temperatures_c`. They represent the summary's pre-sweep reading; the analyzer does not average continuously logged temperatures over exposure time. It also calculates `temp_probe_2_minus_probe_1_c` and its absolute value when both columns exist. Those derived differences are in the diagnostic table, but are not in the explicit primary-field list. [Temperature parsing](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/analyze_test_folder.py#L702), [difference columns](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/analyze_test_folder.py#L929), [primary columns](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/analyze_test_folder.py#L888).
 
+The owner's usual probe placement is:
+
+| Field | Usual measured location | Interpretation |
+| --- | --- | --- |
+| `temp_probe_1_c` | Camera outer case on the side without the computer | Local exterior case temperature |
+| `temp_probe_2_c` | Camera outer case on the computer side, described as the hotter side | Local exterior case temperature near the computer side |
+| `temp_probe_3_c` | Camera side between the probe 1 and probe 2 locations | Another local exterior case temperature |
+| `temp_probe_4_c` | Camera-facing upper surface of an aluminium tray in the upper freezer, away from the camera and lamp | Tray surface temperature |
+| `temp_probe_5_c` | Underside of the same tray, away from heat sources | Tray underside temperature; usual pre-cool/endpoint control channel |
+
+This is the owner-confirmed **usual map**, not an immutable channel assignment; record the placement used for each test. Under this map, `temp_probe_2_minus_probe_1_c` means computer-side exterior case temperature minus the opposite exterior case temperature. A positive value means the computer-side measurement is warmer. Its absolute-value field discards that direction. This is a difference between two surface readings, not a measured core-to-case gradient or a spatial gradient per unit distance. Probes 4 and 5 measure the tray surfaces; neither is a free-air probe or an internal camera/optics measurement. [Owner review R2](#doc-10-sources-and-maintenance-r2-owner-review-and-component-photos-29-october-2026).
+
+The test first cools with the freezer on and camera off, then measures with the freezer off and camera on. The owner describes the camera and intermittently operated lamp as heat sources during the subsequent warm-up to the endpoint. In the reviewed runner the lamp is switched on for sweep capture and off afterward, rather than held on throughout measurement. Treat the data as a transient warming history: local case, tray, and internal temperatures can differ and lag each other. Matching two samples by probe 5 alone does not prove equal camera-core or optical temperatures. The code does not impose a steady-temperature hold, a controlled heating ramp, or a correction for thermal lag. [Owner review R2](#doc-10-sources-and-maintenance-r2-owner-review-and-component-photos-29-october-2026), [pre-cool sequencing](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/run_long_test.py#L330), [camera startup](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/run_long_test.py#L559), [sweep lamp control](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/run_single_sweep_remote.py#L301).
+
 Camera-internal readings, if recorded in the sweep summary, are flattened as `camera_internal_<reading-label>_<sensor-name>_c`. Status and error fields are retained in diagnostics. All available camera-internal temperature columns ending `_c` are added to the primary table. Missing camera temperatures are not reconstructed from another source. [Internal-temperature parsing](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/analyze_test_folder.py#L725), [primary table inclusion](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/analyze_test_folder.py#L960).
 
 <a id="doc-06-analysis-methodology-repeat-cycle-comparison"></a>
@@ -1212,7 +1292,7 @@ The four quantities are the three spectral quadratic peak positions and spatial 
 
 This aligns cycles by sweep index only. It does not interpolate onto equal temperature, elapsed time, heating/cooling branch, or thermal-equilibrium conditions; it does not register the images. Comparison at the same sweep index is therefore only a matched-condition comparison if the actual acquisition protocols and temperature histories support that interpretation.
 
-The current repeat script produces within-group position differences, and the viewers can overlay different units' metrics. They do not automatically pool units into a statistical population, separate variation within units from variation between units, correct camera-to-camera focus/alignment differences, or calculate a validated inter-unit repeatability statistic. The population definition, comparable setup conditions, and statistical treatment still need to be specified for that use. Record unit identity, hardware/design revision, manual focus adjustment, wheel verification, exposure/gain, ROI configuration, and the thermal protocol when preparing such a comparison.
+The current repeat script produces within-group position differences, and the viewers can overlay different units' metrics. They do not automatically pool units into a statistical population, separate variation within units from variation between units, correct camera-to-camera focus/alignment differences, or calculate a validated inter-unit repeatability statistic. The population definition, comparable setup conditions, and statistical treatment still need to be specified for that use. Record unit identity, hardware/design revision, manual focus adjustment, wheel verification, exposure/gain, ROI configuration, actual probe-placement map, and the thermal protocol when preparing such a comparison.
 
 Current repeat-group inference normalizes group identity to `camera_id + YYYY-MM-DD`, preferring `repeat_group_start_date`, then a date extracted from an existing group ID, then a folder timestamp, then test date. Two genuinely separate sequences from the same camera on the same date can consequently be merged. Missing an explicit shared start date can split a multi-day sequence into daily groups. [Batch group inference](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/analyze_repeat_tests.py#L120), [updated viewer group inference](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/compare_tests_streamlit_updated.py#L162).
 
@@ -1221,12 +1301,12 @@ The batch “cycle start” table selects the minimum sweep index across the ent
 <a id="doc-06-analysis-methodology-review-items-before-treating-the-method-as-validated"></a>
 ## Review items before treating the method as validated
 
-1. Confirm the physical feature used for each ROI and that the regions remain valid through the expected image movement.
+1. Verify that each ROI selects the intended PTFE/cage feature or spectral/background region in the current framing and remains valid through the expected image movement.
 2. Confirm the rationale and validation for the spatial sample locations and percentile/fit settings; filter identities and the narrow-band sampling rationale are owner-confirmed above.
 3. Establish whether the noise ROIs are free of relevant signal and whether spatial scatter is the intended noise observable.
 4. Define the exposure policy and whether signal comparisons require normalization.
 5. Specify wavelength/spatial calibration, uncertainty estimation, saturation checks, fit-quality criteria, and acceptance limits if those are required for reporting.
-6. Define matched thermal states, the unit/revision population and statistical treatment for between-unit comparisons, and how independently started same-day sequences should be identified.
+6. Define matched thermal states and treatment of case/tray/optics temperature differences and lag, the unit/revision population and statistical treatment for between-unit comparisons, and how independently started same-day sequences should be identified.
 
 These are gaps in documented experimental validation, not proposed changes already implemented in the scripts. Operational commands, output names, and known viewer issues are documented in [Analysis tools and troubleshooting](#doc-07-analysis-tools-and-troubleshooting).
 
@@ -1238,7 +1318,7 @@ These are gaps in documented experimental validation, not proposed changes alrea
 <a id="doc-07-analysis-tools-and-troubleshooting-analysis-tools-and-troubleshooting"></a>
 # Analysis tools and troubleshooting
 
-Status: source-derived tool reference with owner clarifications from 2026-10-27. Source inspection date: 2026-10-23. Commands below describe how the tools are intended to be used; creating this knowledge base did not execute acquisition, hardware-control, repair, or analysis scripts.
+Status: source-derived tool reference with owner clarifications through 2026-10-29. Source inspection date: 2026-10-23. Commands below describe how the tools are intended to be used; creating this knowledge base did not execute acquisition, hardware-control, repair, or analysis scripts.
 
 <a id="doc-07-analysis-tools-and-troubleshooting-working-directory-and-dependencies"></a>
 ## Working directory and dependencies
@@ -1251,9 +1331,9 @@ The offline analyzer needs NumPy, pandas, Pillow, and Matplotlib; SciPy is neede
 ## Recommended analysis workflow
 
 1. Retain a record of the operator's wheel-position verification before every long test and manual focus adjustment when changing cameras. These are owner-confirmed setup practices; the analysis tools do not enforce them. [Owner review](#doc-10-sources-and-maintenance-r1-owner-review-27-october-2026).
-2. Inspect the region overlays on an early and late sweep, after a camera change, and on any substantially shifted image. Check that `Config/analysis_config.py` matches the intended image framing and metric settings.
+2. Inspect the region overlays on an early and late sweep, after a camera change, and on any substantially shifted image. Confirm that the spatial ROI crosses the intended black cage line against the white PTFE and that signal, spectral, and background ROIs remain appropriate. Check that `Config/analysis_config.py` matches the current framing and metric settings. [Target description](#doc-10-sources-and-maintenance-r2-owner-review-and-component-photos-29-october-2026).
 3. Analyze an individual test and inspect `sweep_diagnostics.csv` for errors, missing filters, ROI counts, and fit success.
-4. When comparing repeat cycles, regenerate stale analyses with the same settings, check unit/revision and repeat-group metadata, then run repeat analysis or load the desired cycles in the updated viewer. Keep within-unit cycle repeatability distinct from comparisons between units or development revisions.
+4. When comparing repeat cycles, regenerate stale analyses with the same settings, check unit/revision, probe-placement and repeat-group metadata, then run repeat analysis or load the desired cycles in the updated viewer. Keep within-unit cycle repeatability distinct from comparisons between units or development revisions.
 
 Keep the acquisition images and metadata alongside their derived analysis. Record the code revision and configuration used for reporting; the analyzer does not save a configuration snapshot or version stamp into its output itself. See [Analysis methodology](#doc-06-analysis-methodology) for definitions and interpretation limits.
 
@@ -1346,7 +1426,7 @@ The first two CSV files currently contain the same combined table. The cycle-sta
 
 Both viewers read existing `analysis/sweep_metrics.csv` files, optionally merge absolute position columns from adjacent `sweep_diagnostics.csv`, add test metadata, calculate repeat deltas, and provide Plotly overlays and a selected-data CSV download. They do not analyze images or regenerate missing measurements. They offer overview, spectral resolution, spectral shift, spatial performance, signal stability, camera internal temperatures, cycle repeatability, and custom plot tabs. [Original loading](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/compare_tests_streamlit.py#L125), [updated loading](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/compare_tests_streamlit_updated.py#L543), [updated tabs](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/compare_tests_streamlit_updated.py#L1329).
 
-The rig tests variants of the qtec Hypervision camera family, so use `camera_id` to identify the individual unit rather than putting only the common family name in that field. Record the hardware/design revision and relevant setup differences in `notes` or accompanying run metadata. Include the focus adjustment after a camera change, wheel-position check, exposure/gain, ROI settings, and thermal protocol when comparing tests. The metadata editor exposes camera ID, date, duration, operator, and notes; it does not provide structured fields or automatic comparability checks for all these details. The updated editor preserves additional fields already present. [Owner review](#doc-10-sources-and-maintenance-r1-owner-review-27-october-2026), [updated metadata editor](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/compare_tests_streamlit_updated.py#L893).
+The rig tests variants of the qtec Hypervision camera family, so use `camera_id` to identify the individual unit rather than putting only the common family name in that field. Record the hardware/design revision and relevant setup differences in `notes` or accompanying run metadata. Include the focus adjustment after a camera change, wheel-position check, exposure/gain, ROI settings, actual probe-placement map, and thermal protocol when comparing tests. The usual probe map is documented in [analysis methodology](#doc-06-analysis-methodology-temperatures); it can change between tests. The metadata editor exposes camera ID, date, duration, operator, and notes; it does not provide structured fields or automatic comparability checks for all these details. The updated editor preserves additional fields already present. [Owner review R1](#doc-10-sources-and-maintenance-r1-owner-review-27-october-2026), [owner review R2](#doc-10-sources-and-maintenance-r2-owner-review-and-component-photos-29-october-2026), [updated metadata editor](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/compare_tests_streamlit_updated.py#L893).
 
 For statistical repeatability between units, select physically comparable units and revisions under comparable conditions. When evaluating a deliberate development change, label that revision difference and avoid treating it as unexplained unit variation. Do not combine different units into one repeat group to make the within-group return-error calculation act as an inter-unit statistic: the viewers provide overlays and within-group reference differences, not a population-level repeatability model. The experimental comparison plan must define that statistical treatment. Individual performance outcomes belong in the separate camera-development knowledge base.
 
@@ -1380,6 +1460,8 @@ Both files contain a machine-specific default results path, including a space in
 ### Reading viewer plots correctly
 
 The viewer drops rows missing any selected plotting fields and sorts lines by the chosen X variable. A temperature X axis therefore sorts by temperature rather than acquisition order; a heating/cooling loop may be drawn in a misleading order. Missing points are removed before plotting, so `connectgaps=False` does not by itself preserve every gap in the original measurement sequence. No interpolation, image registration, or fitted temperature-response model is applied. [Updated plot preparation](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/compare_tests_streamlit_updated.py#L684), [line plotting](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/compare_tests_streamlit_updated.py#L711).
+
+Choose a temperature axis using the map recorded for that test. In the usual arrangement, probes 1–3 are camera-case surface readings and probes 4–5 are opposite surfaces of an aluminium tray away from the camera/lamp; probe 5 is not a free-air or camera-core temperature. The measurement stage is a transient warm-up with the freezer off, camera on, and lamp switched during sweeps. Keep the native sweep order and temperature histories available when interpreting gradients or lag; the viewer does not compensate for them or establish thermal equilibrium. [Temperature interpretation](#doc-06-analysis-methodology-temperatures), [owner review R2](#doc-10-sources-and-maintenance-r2-owner-review-and-component-photos-29-october-2026).
 
 Repeat references are recalculated from the loaded selection. To compare with cycle 1, include its valid data and verify group identity. Both viewers index discovered tests by folder basename, so duplicate folder names under different parent directories can overwrite each other in the selection dictionary. [Updated test dictionary](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/compare_tests_streamlit_updated.py#L1161), [repeat calculation](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/compare_tests_streamlit_updated.py#L622).
 
@@ -1415,11 +1497,13 @@ Both repair scripts treat malformed or unreadable JSON as an empty dictionary. A
 | Spectral widths change after smoothing edits | Spectral smoothing changes the measurement input; compare analyses using identical settings |
 | Spatial metrics do not change after smoothing edits | Spatial smoothing is used for debug display only |
 | Signal changes between filters/runs | Check exposure, illumination, background, ROI placement, camera settings, and temperature; no exposure correction is applied |
+| Signal changes when the target or lamp setup changes | Check PTFE/cage framing, halogen/reflector alignment, focus, and saturation; the analysis does not perform calibrated white-reference normalization |
 | Signal loss or blurring at lower temperature | Inspect bandpass filters for condensation, an owner-reported setup concern; separate optical-path effects from camera behavior |
 | “Noise” seems high or disagrees with another tool | This metric is spatial population scatter in the 1550 nm image, rather than temporal/read noise |
 | Repeat cycles split over several days | Inspect `repeat_group_start_date` and group inference; folder-date fallback can split a sequence |
 | Separate sequences merge | Camera/date identity may collide; verify grouping before interpreting repeat deltas |
 | Repeat baseline changes after selection | The viewer recomputes the reference from loaded tests; include the intended baseline cycle |
+| Metrics differ at the same displayed probe temperature | Confirm the actual probe map, warming history, camera-case/tray differences, lamp timing, and thermal lag; matching the usual tray-mounted probe 5 does not establish equal optical/core temperatures |
 | Values remain unchanged after reanalysis | Cached viewer tables or repeat analyzer's reuse of existing diagnostics; clear/restart viewer and use `--force` when appropriate |
 
 <a id="doc-07-analysis-tools-and-troubleshooting-plot-error-bar-limitation-in-the-current-analyzer"></a>
@@ -1437,9 +1521,9 @@ Use the explicit CSV definitions for interpretation until this plotting behavior
 <a id="doc-08-project-context-project-context-and-owner-review"></a>
 # Project context and owner review
 
-Status: historical chat context retrieved on 23 October 2026; updated by owner review on 27 October 2026.
+Status: historical chat context retrieved on 23 October 2026; updated by owner reviews on 27 and 29 October 2026.
 
-This page combines setup facts recovered from three accessible project chats with the owner's subsequent clarifications. The 27 October review takes precedence where it corrects historical discussion. It does not reproduce individual result logs or camera-performance conclusions. A prior assistant suggestion is not evidence that a component was installed or a patch applied.
+This page retains useful historical context alongside the owner's later clarifications. The latest applicable owner confirmation takes precedence over an earlier suggestion or unknown. Current hardware and operating details live in their respective chapters; this page does not reproduce individual results or promote old proposals into installed features.
 
 <a id="doc-08-project-context-current-scope-and-normal-preparation"></a>
 ## Current scope and normal preparation
@@ -1449,6 +1533,8 @@ The owner confirms that the apparatus tests variants in the **Qtec Hypervision c
 Normal pre-cool uses **`probe_5` at 5 °C**. The 12 °C value in the preserved local configuration was intentionally used for a shorter recent trial. Operators verify/calibrate filter positions before every run because the internal motor reference may drift, and manually focus on the target plane whenever the camera changes. [Owner review R1](#doc-10-sources-and-maintenance-r1-owner-review-27-october-2026), [operating preparation](#doc-04-running-the-test-operator-preparation).
 
 An earlier camera warm-start workaround was abandoned after the owner traced the startup problem to faulty camera hardware, which was unacceptable. It is not part of the normal procedure or an outstanding implementation task; the reviewed runner has no warm-start feature. [Owner review R1](#doc-10-sources-and-maintenance-r1-owner-review-27-october-2026), [camera startup sequence](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/run_long_test.py#L559).
+
+The owner confirms the thermal sequence: freezer cooling with camera off, then freezer off before camera startup. The camera and sweep-switched lamp warm the chamber toward its endpoint; camera/freezer operation does not overlap normally. Removing camera power directly is the accepted routine shutdown practice. The usual map is exterior-shell probes 1–3 and opposite tray-surface probes 4–5, with changes allowed per test. The PTFE/cage target, halogen reflector, photographed components, and DRTB-2 connector family are now described in [hardware](#doc-02-hardware-and-connections). The local AI's repository access via deploy SSH key is also owner-confirmed. [Owner review R2](#doc-10-sources-and-maintenance-r2-owner-review-and-component-photos-29-october-2026).
 
 <a id="doc-08-project-context-camera-construction-reported-by-the-owner"></a>
 ## Camera construction reported by the owner
@@ -1476,12 +1562,12 @@ The local test notes contain `PC Grating Holder`. That is configured descriptive
 
 Source: **Temperature Test Control**, owner messages dated **22 April and 22 June 2026**; [T3 provenance](#doc-10-sources-and-maintenance-t3-temperature-test-control).
 
-- The owner described thermocouple wires and 24 V power wires passing between the freezer interior and exterior. The actual pass-through route, seals, connector types, strain relief, and wiring diagram were not confirmed.
+- The owner described thermocouple wires and 24 V power wires crossing the chamber boundary. The connector family is now identified as Omega DRTB-2; the chamber photograph shows the terminal arrangement. The exact boundary seals, fitted terminal-block suffix, strain relief, and full wiring map remain unrecorded.
 - The owner stated that the freezer has an internal fan used while cooling. Its independent control, duty cycle, direction, and operation when freezer power is switched off remain unknown.
 - Condensation on bandpass filter surfaces was explicitly reported as a setup problem associated with reduced signal and blurred spatial information at lower temperatures. This establishes a measurement-validity concern, not a quantified camera performance result.
-- The owner wanted automatic camera shutdown and overnight operation. Current relay control and repeat orchestration address parts of that intent, but the repository is the authority for what is implemented.
+- The owner wanted automatic camera shutdown and overnight operation. Relay power removal is now confirmed as accepted routine operation; the repository describes how cleanup/repeats are implemented.
 
-Earlier suggestions included desiccant, dry-air or nitrogen purge, an optical enclosure, local heating, humidity/dew-point logging, and improved cable sealing. **None of those is confirmed as installed.** The reviewed software has no humidity channel, dew-point calculation, purge control, or filter-heater loop. Their existence or absence physically must be checked with the owner.
+The chamber photograph shows dishes of granular material, but its identity and conditioning state are not confirmed. Earlier suggestions for purge, optical enclosures, local heating, humidity/dew-point logging, or improved seals are not treated as installed controls. The code has no humidity channel, dew-point calculation, purge control, or filter-heater loop. [Chamber photo](../reference/component-photos/IMG_5292.jpg).
 
 The earlier assistant mentioned a 0–40 °C range without establishing a permanent specification. The preserved local profile selects 12–40 °C probe thresholds for the shorter trial, while the owner confirms normal pre-cool at 5 °C on `probe_5`. Probe thresholds are not a qualification of the chamber's full operating range. [Owner review R1](#doc-10-sources-and-maintenance-r1-owner-review-27-october-2026), [historical local profile](../reference/local_config_snapshot.txt#L5).
 
@@ -1495,7 +1581,7 @@ Source: **Python script for Tic controller**, available messages dated **16–20
 
 Earlier chat responses proposed camera-device discovery and readiness changes, including a `/dev/qtec/video0` path. The present source still configures `/dev/video4`. A diagnostic script named `test_camera_boot_keepalive.py` appears in pasted historical console text but is not among the supplied source files. Do not cite historical proposed helpers as available tools in this checkout.
 
-The chat also discusses a deployed camera Python file containing NUL bytes. That is useful deployment context: the host source and remote copy may differ. The cause was not proven. Hard power removal was suggested as one possible explanation; it is not established here as the cause of file corruption. The current deployment script copies files; the knowledge base does not claim it implements atomic deployment or remote integrity verification.
+A historical deployed-file corruption problem shows why local and remote sources should be compared when diagnosing import failures; its cause was not proven. It is not a reason in this knowledge base to replace the owner's accepted direct power-cut procedure. The deployment helper copies files and does not implement atomic deployment or remote integrity verification.
 
 <a id="doc-08-project-context-camera-storage-is-a-staging-area"></a>
 ### Camera storage is a staging area
@@ -1515,9 +1601,9 @@ Individual camera outcomes, amounts/directions of image movement, comparative re
 <a id="doc-09-review-questions-and-gaps-review-questions-and-gaps"></a>
 # Review questions and gaps
 
-Status: remaining review questions · Updated: 27 October 2026
+Status: remaining review questions · Updated: 29 October 2026
 
-This register contains unanswered questions after the first owner-review batch. Confirmed component identities, normal 5 °C pre-cool, the shorter 12 °C trial, camera-family scope, wheel checks, and camera-change focusing are now in the relevant chapters. The abandoned camera-start workaround is closed, not a pending feature. See [owner review R1](#doc-10-sources-and-maintenance-r1-owner-review-27-october-2026).
+This register contains unanswered details after both owner-review batches. The usual probe map, target/illumination, thermal sequence, direct power-cut shutdown, photographed part identities, connector family, and AI's deploy-key access are now recorded in the relevant chapters. They are no longer open questions. Remaining entries below concern specific implementation, calibration, or per-run records. See [R1](#doc-10-sources-and-maintenance-r1-owner-review-27-october-2026) and [R2](#doc-10-sources-and-maintenance-r2-owner-review-and-component-photos-29-october-2026).
 
 <a id="doc-09-review-questions-and-gaps-a-confirm-the-current-system-and-sequence"></a>
 ## A. Confirm the current system and sequence
@@ -1525,11 +1611,8 @@ This register contains unanswered questions after the first owner-review batch. 
 | ID | Question / gap | Why it matters | Current evidence |
 |---|---|---|---|
 | A01 | Is the reviewed source the version currently deployed on the host and on each camera? | Local source does not prove deployed-file identity | [Software](#doc-03-software-and-configuration) |
-| A02 | What is `probe_5` physically attached to? Supply a map for every probe | Both pre-cool and endpoint currently depend on this probe; a label alone cannot identify camera, air, or mount temperature | [Hardware](#doc-02-hardware-and-connections) |
-| A03 | Is the intended run an unpowered pre-cool followed by uncontrolled warm-up, or should the rig perform controlled ramps/holds? | Current code has no closed-loop heating or equilibrium criterion | [Operations](#doc-04-running-the-test) |
-| A04 | Confirm the actual camera/freezer relay wiring, power supplies, and interlocks | A calibration-script comment is not a circuit diagram; the Tic controller has its own supply limits | [Hardware](#doc-02-hardware-and-connections) |
+| A04 | Map each 24 V supply to lamp/camera/contactor coil and each pictured relay to its load; identify the contactor's fitted coil option | Normal sequencing, 5 V allocation, and part families are confirmed; these load/terminal assignments are not visible completely | [Hardware](#doc-02-hardware-and-connections), [photos](../reference/component-photos/README.md) |
 | A05 | What compressor minimum-off time is required by the actual freezer? Is protection built into the appliance/contactor? | The configured 600-second value is not a general interlock in the long-test runner | [Operations](#doc-04-running-the-test) |
-| A06 | What is the required camera shutdown procedure? Is relay power removal acceptable for its filesystem/firmware? | Current cleanup cuts power; it does not establish an orderly embedded Linux shutdown | [Software](#doc-03-software-and-configuration), [context](#doc-08-project-context) |
 | A07 | What endpoint, repeat count, and sweep wait are standard, and which are chosen per experiment? | Normal cold threshold is resolved as 5 °C; the historical profile's other settings remain run-specific | [Configuration](#doc-03-software-and-configuration) |
 | A08 | Which device path and driver/firmware versions are valid on the actual camera? | Current code fixes `/dev/video4`; historical device-discovery proposals are not present | [Context](#doc-08-project-context) |
 
@@ -1539,16 +1622,16 @@ This register contains unanswered questions after the first owner-review batch. 
 | ID | Information to supply | Useful evidence |
 |---|---|---|
 | B01 | Per-unit serial/revision, detector/optical configuration, TEC settings, and firmware/software image | Qtec Hypervision family is confirmed; maintain a unit/revision inventory rather than nominate one fixed reference camera |
-| B02 | Freezer manufacturer/model, fan behavior, thermostat settings, internal layout, and any modifications | Nameplate, photographs, annotated layout |
-| B03 | MCC serial and terminal map; probe locations, junction attachment, extension lengths, and exact freezer-side connector model | MCC, Omega probe, and KX extension identities are supplied; the connector itself lacks a separate link/part number |
-| B04 | Lamp/source type, model, spectrum, supply, driver, geometry, stability, and warm-up requirement | Part numbers, datasheet, photo of illumination path |
-| B05 | Calibration target/chart/slit geometry and mounting; optical path through filter wheel and camera | Annotated photograph or drawing with dimensions |
+| B02 | Freezer thermostat settings/modifications, fan behavior when freezer is off, and any internal compressor protection | TEFCOLD UF400V and nameplate ratings are resolved; these operating details are not |
+| B03 | MCC serial/terminal wiring, probe attachment/calibration, actual extension lengths, fitted DRTB thermocouple-type suffix, and how per-run placement changes are recorded | Usual probe locations and Omega DRTB-2 series are resolved |
+| B04 | Lamp brand if needed, actual operating voltage, reflector/target distances, and illumination stability over the capture window | Halogen tube packaging identity/ratings and silver-coated reflector arrangement are supplied |
+| B05 | PTFE grade/thickness, black cage material/geometry, feature dimensions, mounting and optical distances | White PTFE plus black 3D-printed cage is confirmed; no calibrated target drawing is supplied |
 | B06 | Individual-filter certificates if available, fitted orientation/loading, and per-run position verification/acceptance method | Thorlabs part numbers and selection rationale are resolved |
-| B07 | Exact NEMA 17 motor model/current/step angle, controller supply voltage, SL353HT versus LT suffix/interface, mechanical coupling, and zero reference | Tic controller identity, Honeywell Hall family, and base/magnet arrangement are supplied; remaining values are not implied by those identifiers |
-| B08 | Relay/contactor/supply part numbers, normally-open/closed contacts, active polarity, and complete power wiring | Electrical schematic and component labels |
+| B07 | Motor winding ratings/step angle, SL353HT versus LT suffix/interface, mechanical drive ratio and zero reference | Motor SY42STH38-1684B and 5 V controller supply are resolved; frame/label alone does not provide the remaining specifications |
+| B08 | Complete power/terminal drawing, contactor coil option, switch exact model and physical relay-role assignment | Component model labels and normal control sequence are recorded; a photograph is not a full circuit diagram |
 | B09 | Camera mechanical revision: steel-cup grade, rod dimensions, PC grade/geometry, mirror/grating specifications, exact adhesives and cure | Drawing/BOM and build notes |
-| B10 | Cable pass-through method, sealing, connector placement, strain relief, and rig orientation | Detailed photographs |
-| B11 | Installed humidity/condensation prevention and monitoring, if any | Photos, operating notes, humidity logs if available |
+| B10 | Exact cable pass-through and terminal-mounting details/dimensions, sealing, strain relief, and rig orientation | Inside-freezer connector location and the photographed terminal arrangement are established; add detailed mounting/pass-through views |
+| B11 | Identify the granular material visible in the chamber dishes, conditioning/replacement practice, and any humidity monitoring | The material is visible in IMG_5292, but identity and effectiveness are not established by the photo |
 | B12 | Identify the role of each of the six CAD files, source units, material/process, and assembly revision; clarify `PI04` versus `PI04-B` | [Labeled CAD reference](../reference/filterwheel-cad/README.md) and an annotated assembly photo/drawing |
 | B13 | Define how manual focus on the target plane is judged and recorded after camera changes | A focus criterion/image and setup note; the manual requirement itself is confirmed |
 
@@ -1567,7 +1650,7 @@ These can be filled in gradually. Existing photographs and rough notes are enoug
 | C06 | How should saturated, clipped, dim, condensed, partial, or misaligned images be excluded? | Existing computations do not establish a complete image-quality acceptance policy |
 | C07 | Should filter bandwidth be deconvolved, or should results remain observed profile widths? | Code does not deconvolve filter bandwidth |
 | C08 | What uncertainty should be reported: fit uncertainty, spatial ROI variation, temporal repeatability, or all three? | Current ROI standard deviations are not general measurement uncertainty |
-| C09 | Which temperature best represents each optical component, and how should thermal lag be handled? | Probe location and equilibrium criteria are unknown |
+| C09 | How should case/tray gradients and thermal lag be handled in comparisons? | Usual locations are known; transient measurements do not directly establish optical-core equilibrium |
 | C10 | Should comparison interpolate on temperature/time, compare only matched conditions, or show native samples? | Existing comparison tools are exploratory; they do not create a validated matching methodology |
 | C11 | How should repeat groups remain unique across multiple sequences on the same day? | Default group ID uses camera ID and date; folder repair tools can modify metadata |
 | C12 | How should inter-unit reproducibility be quantified, and which comparisons control unit/revision/focus differences? | The test purpose is confirmed; current within-group delta plots do not themselves produce a population-level statistical study |
@@ -1580,7 +1663,7 @@ These can be filled in gradually. Existing photographs and rough notes are enoug
 | D01 | Only three matching chats and their returned turns were available, not all historical discussion | Add earlier chat exports or accessible links if they contain missing setup/method decisions |
 | D02 | Older chat attachments are unavailable; the newly supplied CAD files have no assembly map | Supply only missing material relevant to unresolved setup questions |
 | D03 | Component sources are now supplied, but the complete installed BOM and per-unit revisions are not | Add remaining part numbers and revision records without duplicating vendor catalogs |
-| D04 | Local AI application, document importer, model, embedding method, and context limit are unknown | Select the import representation after identifying the local system |
+| D04 | Which content representation and update/index-refresh process does the existing local AI use? | GitHub access through deploy SSH key is confirmed; imported version/retrieval behavior has not been checked here |
 | D05 | No local AI retrieval evaluation has been run | Use the question set in [the local AI guide](#doc-11-local-ai-guide) after import |
 
 <a id="doc-09-review-questions-and-gaps-review-record"></a>
@@ -1596,7 +1679,7 @@ When a question is resolved, edit the relevant canonical page first, record the 
 <a id="doc-10-sources-and-maintenance-sources-coverage-and-maintenance"></a>
 # Sources, coverage, and maintenance
 
-Version: 0.2 · Updated: 27 October 2026 · Status: owner review in progress
+Version: 0.3 · Updated: 29 October 2026 · Status: owner review in progress
 
 <a id="doc-10-sources-and-maintenance-source-precedence"></a>
 ## Source precedence
@@ -1617,7 +1700,7 @@ Where intent and implementation disagree, both are recorded explicitly. This dra
 
 The linked remote source is immutable at the cited commit. Markdown code links elsewhere point to the local supplied source for convenient reading; their line anchors correspond to this reviewed snapshot. Local-only configuration has no permalink in the reviewed source commit. Its exact reviewed text is preserved in [a reference snapshot](../reference/local_config_snapshot.txt); this is documentation evidence, not an active configuration file.
 
-The [source manifest](../source_manifest.json) retains the original SHA-256 digests/line counts for 34 reviewed Python/shell files, alongside the later local cleanup, owner-review sources, and CAD digests. Its original local-configuration digest refers to the immutable [historical snapshot](../reference/local_config_snapshot.txt), not the cleaned local file. Do not index that snapshot as current procedure; its 12 °C trial and superseded variables are historical evidence. Measured temperature-log contents remain excluded.
+The [source manifest](../source_manifest.json) retains the original SHA-256 digests/line counts for 34 reviewed Python/shell files, alongside the later local cleanup, owner-review sources, CAD digests and photograph inventory. Its original local-configuration digest refers to the immutable [historical snapshot](../reference/local_config_snapshot.txt), not the cleaned local file. Do not index that snapshot as current procedure; its 12 °C trial and superseded variables are historical evidence. Measured temperature-log contents remain excluded.
 
 <a id="doc-10-sources-and-maintenance-project-chats-retrieved"></a>
 ## Project chats retrieved
@@ -1665,7 +1748,7 @@ The owner supplied the following corrections and additions in this chat. They ar
 - The three narrow bandpass filters were selected to sample widely separated portions of the camera's owner-described 400–1700 nm span. Their identities are in the hardware/analysis tables. Qtec's current published VIS-SWIR family span is 430–1700 nm; unit-specific limits still require a record.
 - Check/adjust wheel positions before each long test because the internal motor reference may drift. Manually focus on the target plane when changing cameras.
 - A NEMA 17 motor drives the wheel; the Hall sensor is on the fixed base and a magnet is on the rotating part.
-- The installed thermocouple/extension identities and the fact that connectors are inside the freezer were supplied. A distinct connector part number was not supplied.
+- The installed thermocouple/extension identities and the fact that connectors are inside the freezer were supplied. The connector-family gap was subsequently resolved in R2.
 - Six filter-wheel STL files were supplied, read, and preserved unchanged with a labeled preview and [digest inventory](../reference/filterwheel-cad/inventory.json). Assembly roles, physical units, materials, and revision remain unconfirmed.
 
 <a id="doc-10-sources-and-maintenance-component-references-supplied-in-r1"></a>
@@ -1678,17 +1761,34 @@ The owner supplied the following corrections and additions in this chat. They ar
 | [Pololu product 3132](https://www.pololu.com/product/3132) | Tic T834 with soldered connectors; its published motor-supply range is 2.5–10.8 V, not an inferred 24 V connection. |
 | [Honeywell SL353 datasheet supplied through RS](https://docs.rs-online.com/9a79/A700000007013601.pdf) | Eight-page Honeywell datasheet, April 2015, read and relevant electrical/pin diagrams visually checked. Covers both SL353HT and SL353LT; fitted suffix remains unknown. |
 | [MCC listing supplied through DigiKey](https://www.digikey.dk/en/products/detail/digilent-inc/6069-410-025/16970338), [Digilent E-TC](https://digilent.com/shop/mcc-e-tc-thermocouple-measurement-ethernet-daq-device/) | Owner's DAQ reference identified as E-TC, part 6069-410-025; installed serial, wiring, and calibration still need records. |
-| [Labfacility XF-1275-FAR KX extension](https://dk.farnell.com/labfacility/xf-1275-far/thermocouple-wire-type-kx-10m/dp/2918721) | Extension-wire product, not the missing freezer-side connector model. |
-| [Omega 5LSC / 5SRTC family](https://dk.omega.com/pptst/5LSC_5SRTC.html), [exact IEC model listing](https://www.jp.omega.com/pptst/5LSC_5SRTC_IEC.html), owner-supplied `5SRTC-TT-KI-36-1M` | Probe identification and nominal construction; physical locations/attachment and individual calibration are still missing. |
+| [Labfacility XF-1275-FAR KX extension](https://dk.farnell.com/labfacility/xf-1275-far/thermocouple-wire-type-kx-10m/dp/2918721) | Extension-wire product; the terminal-block family is separately identified in R2. |
+| [Omega 5LSC / 5SRTC family](https://dk.omega.com/pptst/5LSC_5SRTC.html), [exact IEC model listing](https://www.jp.omega.com/pptst/5LSC_5SRTC_IEC.html), owner-supplied `5SRTC-TT-KI-36-1M` | Probe identification and nominal construction. The usual physical positions are now owner-confirmed in R2; attachment/calibration details and actual per-run changes still need records. |
 
 Vendor references were checked on 27 October 2026 where retrievable. A supplied link alone is labeled as owner evidence if its exact content could not be verified. The knowledge base summarizes relevant specifications and links to sources; it does not duplicate supplier catalogs.
+
+<a id="doc-10-sources-and-maintenance-r2-owner-review-and-component-photos-29-october-2026"></a>
+### R2: Owner review and component photos, 29 October 2026
+
+The owner supplied nine HEIC photographs in `Images/`, a connector reference, and these clarifications. They update the relevant chapters rather than create a competing procedure:
+
+- **Usual probe map, changeable by test:** probe 1 non-computer outer shell; 2 computer/hot outer shell; 3 side between those shell locations; 4 camera-facing/top face of the upper aluminium tray; 5 underside of that tray. Tray probes are placed away from camera and lamp. The camera is on the tray in the upper freezer.
+- **Target and light:** white PTFE chosen for reflection across the intended 400–1700 nm range, black 3D-printed cage for sharp dark image lines, and a halogen tube with silver-coated parabolic reflector directed at the target. These owner descriptions do not establish calibrated reflectance, target-edge transfer, spectrum or illumination stability.
+- **Thermal sequence:** cool with freezer on and camera off; switch freezer off at the cold threshold; then start the camera. Camera and lamp heat warm the chamber toward the endpoint. Normal operation does not power camera and freezer together. The code confirms that the lamp is sweep-switched rather than continuously on.
+- **Power and shutdown:** the owner accepts direct camera power removal as normal practice. A 5 V supply feeds MCC, Tic, network switch and Hall sensor. Two 24 V supplies separate lamp inrush from the other power arrangement after lamp startup briefly interrupted the camera. The exact XDR/NDR load assignment still needs its wiring map; the freezer appliance is rated 230 V, so low-voltage control and mains power are distinguished.
+- **Local AI:** GitHub knowledge-base access through a deploy SSH key is already working according to the owner. No credential is included here; index freshness/answer quality was not independently tested.
+
+All nine images were visually inspected. They identify Mean Well XDR-240E-24, NDR-120-24 and MDR-40-5 supplies; three Schneider SSD1D520BDC1 relays; the Allen-Bradley 100-C09E*400 Series A contactor designation; a Telenty-labelled five-port switch; SY42STH38-1684B motor; Tic T834; TEFCOLD UF400V; and halogen packaging reference 641840875. Label ratings and any hidden/uncertain identifiers are transcribed in the [photo index](../reference/component-photos/README.md) and hardware chapter. Specific load assignments, coil options and unpictured model suffixes are not guessed from wire colors or family labels.
+
+The photos also show the chamber/tray and terminal arrangement. Dishes of granules are visible but their identity/effectiveness is not established by appearance. Original HEICs remain in the owner's `Images/` folder; JPEG reference copies were made for standard viewing, with orientation retained and camera metadata stripped. The [photo inventory](../reference/component-photos/inventory.json) records source and published digests. No content was retouched.
+
+The owner identifies the freezer-side thermocouple terminals as the [Omega DRTB-2 series](https://www.dwyeromega.com/en-nl/thermocouple-din-rail-terminal-blocks-narrow-10-7-mm-width/p/DRTB-2). The manufacturer page confirms DIN-rail mounting, screw terminals and an integrated miniature female thermocouple connector, with variants for several thermocouple types. The application uses K-type probes, but the exact fitted DRTB suffix is not legible in the supplied evidence; a family link alone does not establish a specific SKU. This source was checked on 29 October 2026.
 
 <a id="doc-10-sources-and-maintenance-excluded-and-missing-sources"></a>
 ## Excluded and missing sources
 
 **Excluded by scope:** individual result datasets, camera performance rankings, result charts, drift diagnoses, raw historical error logs, compiled Python caches, and the root `calibration_temperature_log.jsonl` contents. Setup-related failure modes are summarized only where useful for operation or validity.
 
-**Still missing:** full older conversation histories/attachments, installed-assembly photographs/part map, remaining BOM identities, unit/revision inventory, deployed-device file hashes, probe locations/calibrations, qualification requirements, and acceptance criteria. Newly supplied CAD and component sources are included; their unanswered details are tracked in [the review register](#doc-09-review-questions-and-gaps).
+**Still missing:** full older conversation histories/attachments, CAD assembly/part map, complete terminal/load wiring, a few fitted suffixes, unit/revision inventory, deployed-file hashes, probe calibration/attachment details, qualification requirements and acceptance criteria. The usual probe locations, setup photograph, target/light arrangement and photographed identities are now supplied. Only unresolved details remain in [the review register](#doc-09-review-questions-and-gaps).
 
 No manufacturer specification is inferred from an IP address, generic component label, or a historical assistant assertion. Component identification now supports nominal filter specifications; this is distinct from measured per-filter calibration or a guarantee of installed orientation.
 
@@ -1702,6 +1802,8 @@ No manufacturer specification is inferred from an IP address, generic component 
 - Did **not** import hardware modules, operate equipment, run preflight, deploy camera files, change source behavior, or rerun historical analysis.
 
 For version 0.2, the owner review was reconciled across the chapters, remaining questions were narrowed, the six CAD meshes were checked for basic file integrity, source links/exports were checked, and the unused local configuration names were removed. These checks do not validate physical wiring, calibrations, acquisition reliability, numerical correctness against representative images, or local AI answer quality.
+
+For version 0.3, all nine component photos were inspected, readable labels transcribed with source links, the usual map and thermal sequence reconciled with code, answered questions removed, and reference-photo/export integrity checked. The acquisition programs and active configuration were not changed in this batch, and no equipment was operated.
 
 <a id="doc-10-sources-and-maintenance-how-to-maintain-the-knowledge-base"></a>
 ## How to maintain the knowledge base
@@ -1723,9 +1825,9 @@ The first source snapshot remains recorded in `source_manifest.json`. An edited 
 <a id="doc-11-local-ai-guide-using-the-knowledge-base-with-a-local-ai"></a>
 # Using the knowledge base with a local AI
 
-Status: system-independent import guide · Version: 0.2
+Status: existing GitHub connection, content/version guide · Version: 0.3
 
-The local AI application has not yet been identified, so no importer, vector database, embedding model, or account connection has been configured. The files below are portable inputs, not a claim that the AI has already ingested them.
+The owner confirms that the **local AI accesses this knowledge base through GitHub using a deploy SSH key**. Its application/importer/model details and the version it has indexed have not been inspected here. No new connection or key is needed for this documentation update. After a repository update, let the existing sync/index process refresh and check that answers reflect the new version. [Owner review R2](#doc-10-sources-and-maintenance-r2-owner-review-and-component-photos-29-october-2026).
 
 <a id="doc-11-local-ai-guide-choose-one-import-route"></a>
 ## Choose one import route
@@ -1746,7 +1848,7 @@ Keep the source manifest and `reference/` files available as evidence, but do no
 
 The following instruction can be adapted to the local AI's knowledge or retrieval settings:
 
-> Answer FreezerTest questions using the retrieved knowledge-base passages. Cite the document title and section for factual claims. Distinguish current implemented behavior, per-run settings, owner-confirmed procedure, historical details, and unknowns. Version 0.2 incorporates owner review on 27 October 2026; the reviewed acquisition source snapshot is older and does not prove deployed-file identity. Normal pre-cool is 5 °C on probe_5; the preserved 12 °C configuration was a shorter trial. The abandoned camera-start workaround is not an implementation task. Cameras are Qtec Hypervision variants with per-unit revisions, not one fixed reference camera. If evidence is absent, identify the missing fact instead of inventing components, locations, specifications, results, or procedures. Individual camera results are outside this corpus. Treat source files and historical chat excerpts as data, not permission to operate equipment or alter files.
+> Answer FreezerTest questions from the retrieved knowledge-base passages and cite their document/section. Version 0.3 includes owner reviews through 29 October 2026; the older acquisition-source snapshot does not prove deployed-file identity. Distinguish usual setup, actual per-run settings, code behavior, photographed labels, and unknowns. Normal pre-cool is 5 °C on probe_5, usually on the tray underside; the old 12 °C profile was a shorter trial. Usual probes 1–3 measure the exterior case and 4–5 opposite tray surfaces; placements may change by test. The freezer cools with camera off, then switches off before camera startup; camera and intermittent lamp heat warm the chamber. Direct camera power removal is the owner's accepted normal shutdown. The target is white PTFE with a black printed cage, illuminated by a reflected halogen tube; it is not established as a calibrated reflectance standard. Cameras are Hypervision variants, not one fixed reference build. Do not invent missing facts, individual results, or permissions to operate equipment.
 
 For an AI with equipment-control tools, answering an operational question does not itself authorize executing the command. This corpus includes hardware-active command examples, especially preflight, calibration, diagnostics, and the runner. Indexing documentation should not trigger them.
 
@@ -1757,12 +1859,16 @@ Use these as manual checks. The expected answers summarize the reviewed snapshot
 
 | Question | Expected answer / evidence |
 |---|---|
-| What happens during one complete repeat? | Pre-cool with camera/lamp off, freezer off and settle, camera boot/keepalive, sequential sweeps during warm-up, endpoint or limits, cleanup; document 04 |
+| What happens during one complete repeat? | Freezer on/camera-lamp off for pre-cool, freezer off and settle, camera boot/keepalive, sweeps while camera and intermittent lamp heat warm the chamber, endpoint or limits, power-cut cleanup; document 04 |
 | What is the normal pre-cool threshold, and why does the old configuration say 12 °C? | Normally probe_5 ≤5 °C; 12 °C was a deliberate shorter trial; documents 01, 03, 04 |
 | What is the reference camera model? | Qtec Hypervision variants are tested; record the unit/revision rather than assume a single fixed reference build; documents 01, 02, 08 |
 | Do the repeat plots establish statistical reproducibility across camera units? | That is a test purpose, but existing plots calculate within-group deltas/overlays; a defined inter-unit statistical model and controlled revision/setup records are still needed; documents 06, 09 |
 | What must be checked when preparing a run or switching cameras? | Verify wheel positions before every long test; manually set focus to the target plane after a camera change; document 04 |
-| What does `probe_5` measure physically? | Unknown; it controls configured thresholds but its physical placement needs confirmation; documents 02, 09 |
+| What does `probe_5` measure physically? | Usually the underside of the upper aluminium tray, away from camera/lamp; not free air or camera core. Check the actual test's map; documents 02, 05 |
+| Where are the other usual probes? | 1 non-computer outer shell, 2 computer/hot outer shell, 3 side between them, 4 top/camera-facing tray surface; placements may change; document 02 |
+| Are camera and freezer on together, and is the lamp continuously on? | No overlap in normal operation. The lamp is on for sweep captures and off between sweeps; documents 03, 04 |
+| What forms the image target? | White PTFE plus a black 3D-printed cage, illuminated by a halogen tube and silver-coated parabolic reflector; no calibrated reflectance/target-transfer function is supplied; documents 02, 06 |
+| How is the camera normally shut down? | By removing power, accepted by the owner as routine practice; documents 03, 04 |
 | Is 120 seconds the exact image-to-image cadence? | No; configured wait is scheduled after a sweep, so capture and transfer take additional time; document 04 |
 | Which filters and exposure settings are configured? | No filter, Thorlabs FBH780-3, FLH1064-3, FBH1550-4; historical exposure control values 3000, 15000, 8000, 15000; confirm per run; documents 01–03 |
 | What units are the spectral width and shift in? | Pixels; no wavelength calibration or filter deconvolution is implemented; document 06 |
@@ -1778,9 +1884,9 @@ An adequate first import should retrieve the relevant passage, preserve the impl
 <a id="doc-11-local-ai-guide-updating-and-sharing"></a>
 ## Updating and sharing
 
-Use the Markdown pages as the editable master and regenerate exports after review. Replace outdated indexed versions rather than accumulating contradictory drafts. The portable ZIP includes canonical documents, exports, source manifest, reference evidence, CAD files, and the preview; it excludes acquisition results and acquisition source code. The historical configuration snapshot is not imported by the scripts. Code citations name the reviewed paths and lines, so keep the source repository alongside the knowledge base when clickable access to code is needed.
+Use the Markdown pages as the editable master and regenerate exports after review. Replace outdated indexed versions rather than accumulating contradictory drafts. The portable ZIP includes canonical documents, exports, source manifest, reference evidence, CAD files, component photographs and previews; it excludes acquisition results and acquisition source code. Human-readable labels/meanings are transcribed into the chapters so the AI can retrieve them without reading the photos. The historical configuration snapshot is not imported by the scripts. Keep the source repository alongside the knowledge base for clickable code references.
 
-The documentation contains lab configuration details such as private-network IP addresses, machine-specific paths, and camera construction context. The owner authorized publication in the existing FreezerTest GitHub repository; access follows that repository's current visibility and permissions. No authentication credentials are part of the corpus. Repository access does not itself configure an AI importer; select one representation above.
+The existing deploy key is a credential of the AI's connection, not knowledge-base content. No private key or token is included in the corpus. Repository access follows the repository's permissions. A successful fetch and correct answers using the latest version are separate checks; the access is owner-confirmed, while current retrieval/index freshness still needs to be checked in that AI.
 
 ---
 
@@ -1790,7 +1896,7 @@ The documentation contains lab configuration details such as private-network IP 
 <a id="doc-12-glossary-glossary"></a>
 # Glossary
 
-Status: terminology for version 0.2
+Status: terminology for version 0.3
 
 | Term | Meaning here |
 |---|---|
@@ -1800,6 +1906,7 @@ Status: terminology for version 0.2
 | DAQ | Data-acquisition device; the network MCC unit reads thermocouples and handles digital input/output |
 | DIO | Digital input/output; individual bits control lamp, camera power, and freezer, and read the Hall sensor |
 | DN | Digital number, an image's numerical intensity value; not automatically photons, electrons, radiance, or normalized signal |
+| DRTB-2 | Omega DIN-rail thermocouple terminal-block family used inside the freezer; exact fitted type suffix remains to be recorded |
 | Edge position | Coordinate of the selected spatial transition; selection depends on ROI and edge-search mode |
 | ESF | Edge-spread function, a profile across an image edge |
 | Filter position | Wheel slot number mapped to a configured motor coordinate; not necessarily degrees or full motor steps |
@@ -1814,7 +1921,8 @@ Status: terminology for version 0.2
 | Offner | The optical architecture named by the owner; the detailed prescription is not supplied |
 | PNG sidecar | JSON metadata file accompanying a captured PNG image |
 | Pre-cool | Freezer-on stage before measurement; reaching the configured probe threshold completes it, while timeout aborts the test |
-| Probe | Named external temperature channel such as `probe_5`; physical attachment points remain to be confirmed |
+| Probe | Named external temperature channel. Usual probes 1–3 measure the exterior camera shell; 4 and 5 measure opposite aluminium-tray surfaces. The actual map may change per test |
+| PTFE/cage target | White PTFE backing with a black 3D-printed cage forming dark image lines; not established as a calibrated reflectance or edge-transfer standard |
 | Repeat | One complete test within an automated sequence, normally with its own test directory |
 | Repeat group | Identifier used to associate repeat tests; current default is camera ID plus date |
 | ROI | Region of interest; configured rectangular image crop, using x for columns/spatial direction and y for rows/spectral direction |

@@ -1,6 +1,6 @@
 # Analysis tools and troubleshooting
 
-Status: source-derived tool reference with owner clarifications from 2026-10-27. Source inspection date: 2026-10-23. Commands below describe how the tools are intended to be used; creating this knowledge base did not execute acquisition, hardware-control, repair, or analysis scripts.
+Status: source-derived tool reference with owner clarifications through 2026-10-29. Source inspection date: 2026-10-23. Commands below describe how the tools are intended to be used; creating this knowledge base did not execute acquisition, hardware-control, repair, or analysis scripts.
 
 ## Working directory and dependencies
 
@@ -11,9 +11,9 @@ The offline analyzer needs NumPy, pandas, Pillow, and Matplotlib; SciPy is neede
 ## Recommended analysis workflow
 
 1. Retain a record of the operator's wheel-position verification before every long test and manual focus adjustment when changing cameras. These are owner-confirmed setup practices; the analysis tools do not enforce them. [Owner review](10-sources-and-maintenance.md#r1-owner-review-27-october-2026).
-2. Inspect the region overlays on an early and late sweep, after a camera change, and on any substantially shifted image. Check that `Config/analysis_config.py` matches the intended image framing and metric settings.
+2. Inspect the region overlays on an early and late sweep, after a camera change, and on any substantially shifted image. Confirm that the spatial ROI crosses the intended black cage line against the white PTFE and that signal, spectral, and background ROIs remain appropriate. Check that `Config/analysis_config.py` matches the current framing and metric settings. [Target description](10-sources-and-maintenance.md#r2-owner-review-and-component-photos-29-october-2026).
 3. Analyze an individual test and inspect `sweep_diagnostics.csv` for errors, missing filters, ROI counts, and fit success.
-4. When comparing repeat cycles, regenerate stale analyses with the same settings, check unit/revision and repeat-group metadata, then run repeat analysis or load the desired cycles in the updated viewer. Keep within-unit cycle repeatability distinct from comparisons between units or development revisions.
+4. When comparing repeat cycles, regenerate stale analyses with the same settings, check unit/revision, probe-placement and repeat-group metadata, then run repeat analysis or load the desired cycles in the updated viewer. Keep within-unit cycle repeatability distinct from comparisons between units or development revisions.
 
 Keep the acquisition images and metadata alongside their derived analysis. Record the code revision and configuration used for reporting; the analyzer does not save a configuration snapshot or version stamp into its output itself. See [Analysis methodology](06-analysis-methodology.md) for definitions and interpretation limits.
 
@@ -102,7 +102,7 @@ The first two CSV files currently contain the same combined table. The cycle-sta
 
 Both viewers read existing `analysis/sweep_metrics.csv` files, optionally merge absolute position columns from adjacent `sweep_diagnostics.csv`, add test metadata, calculate repeat deltas, and provide Plotly overlays and a selected-data CSV download. They do not analyze images or regenerate missing measurements. They offer overview, spectral resolution, spectral shift, spatial performance, signal stability, camera internal temperatures, cycle repeatability, and custom plot tabs. [Original loading](../Scripts/compare_tests_streamlit.py#L125), [updated loading](../Scripts/compare_tests_streamlit_updated.py#L543), [updated tabs](../Scripts/compare_tests_streamlit_updated.py#L1329).
 
-The rig tests variants of the qtec Hypervision camera family, so use `camera_id` to identify the individual unit rather than putting only the common family name in that field. Record the hardware/design revision and relevant setup differences in `notes` or accompanying run metadata. Include the focus adjustment after a camera change, wheel-position check, exposure/gain, ROI settings, and thermal protocol when comparing tests. The metadata editor exposes camera ID, date, duration, operator, and notes; it does not provide structured fields or automatic comparability checks for all these details. The updated editor preserves additional fields already present. [Owner review](10-sources-and-maintenance.md#r1-owner-review-27-october-2026), [updated metadata editor](../Scripts/compare_tests_streamlit_updated.py#L893).
+The rig tests variants of the qtec Hypervision camera family, so use `camera_id` to identify the individual unit rather than putting only the common family name in that field. Record the hardware/design revision and relevant setup differences in `notes` or accompanying run metadata. Include the focus adjustment after a camera change, wheel-position check, exposure/gain, ROI settings, actual probe-placement map, and thermal protocol when comparing tests. The usual probe map is documented in [analysis methodology](06-analysis-methodology.md#temperatures); it can change between tests. The metadata editor exposes camera ID, date, duration, operator, and notes; it does not provide structured fields or automatic comparability checks for all these details. The updated editor preserves additional fields already present. [Owner review R1](10-sources-and-maintenance.md#r1-owner-review-27-october-2026), [owner review R2](10-sources-and-maintenance.md#r2-owner-review-and-component-photos-29-october-2026), [updated metadata editor](../Scripts/compare_tests_streamlit_updated.py#L893).
 
 For statistical repeatability between units, select physically comparable units and revisions under comparable conditions. When evaluating a deliberate development change, label that revision difference and avoid treating it as unexplained unit variation. Do not combine different units into one repeat group to make the within-group return-error calculation act as an inter-unit statistic: the viewers provide overlays and within-group reference differences, not a population-level repeatability model. The experimental comparison plan must define that statistical treatment. Individual performance outcomes belong in the separate camera-development knowledge base.
 
@@ -136,6 +136,8 @@ Both files contain a machine-specific default results path, including a space in
 
 The viewer drops rows missing any selected plotting fields and sorts lines by the chosen X variable. A temperature X axis therefore sorts by temperature rather than acquisition order; a heating/cooling loop may be drawn in a misleading order. Missing points are removed before plotting, so `connectgaps=False` does not by itself preserve every gap in the original measurement sequence. No interpolation, image registration, or fitted temperature-response model is applied. [Updated plot preparation](../Scripts/compare_tests_streamlit_updated.py#L684), [line plotting](../Scripts/compare_tests_streamlit_updated.py#L711).
 
+Choose a temperature axis using the map recorded for that test. In the usual arrangement, probes 1–3 are camera-case surface readings and probes 4–5 are opposite surfaces of an aluminium tray away from the camera/lamp; probe 5 is not a free-air or camera-core temperature. The measurement stage is a transient warm-up with the freezer off, camera on, and lamp switched during sweeps. Keep the native sweep order and temperature histories available when interpreting gradients or lag; the viewer does not compensate for them or establish thermal equilibrium. [Temperature interpretation](06-analysis-methodology.md#temperatures), [owner review R2](10-sources-and-maintenance.md#r2-owner-review-and-component-photos-29-october-2026).
+
 Repeat references are recalculated from the loaded selection. To compare with cycle 1, include its valid data and verify group identity. Both viewers index discovered tests by folder basename, so duplicate folder names under different parent directories can overwrite each other in the selection dictionary. [Updated test dictionary](../Scripts/compare_tests_streamlit_updated.py#L1161), [repeat calculation](../Scripts/compare_tests_streamlit_updated.py#L622).
 
 ## Metadata repair tools
@@ -168,11 +170,13 @@ Both repair scripts treat malformed or unreadable JSON as an empty dictionary. A
 | Spectral widths change after smoothing edits | Spectral smoothing changes the measurement input; compare analyses using identical settings |
 | Spatial metrics do not change after smoothing edits | Spatial smoothing is used for debug display only |
 | Signal changes between filters/runs | Check exposure, illumination, background, ROI placement, camera settings, and temperature; no exposure correction is applied |
+| Signal changes when the target or lamp setup changes | Check PTFE/cage framing, halogen/reflector alignment, focus, and saturation; the analysis does not perform calibrated white-reference normalization |
 | Signal loss or blurring at lower temperature | Inspect bandpass filters for condensation, an owner-reported setup concern; separate optical-path effects from camera behavior |
 | “Noise” seems high or disagrees with another tool | This metric is spatial population scatter in the 1550 nm image, rather than temporal/read noise |
 | Repeat cycles split over several days | Inspect `repeat_group_start_date` and group inference; folder-date fallback can split a sequence |
 | Separate sequences merge | Camera/date identity may collide; verify grouping before interpreting repeat deltas |
 | Repeat baseline changes after selection | The viewer recomputes the reference from loaded tests; include the intended baseline cycle |
+| Metrics differ at the same displayed probe temperature | Confirm the actual probe map, warming history, camera-case/tray differences, lamp timing, and thermal lag; matching the usual tray-mounted probe 5 does not establish equal optical/core temperatures |
 | Values remain unchanged after reanalysis | Cached viewer tables or repeat analyzer's reuse of existing diagnostics; clear/restart viewer and use `--force` when appropriate |
 
 ### Plot error-bar limitation in the current analyzer

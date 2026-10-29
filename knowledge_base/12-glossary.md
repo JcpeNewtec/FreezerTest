@@ -1,6 +1,6 @@
 # Glossary
 
-Status: terminology for version 0.2
+Status: terminology for version 0.3
 
 | Term | Meaning here |
 |---|---|
@@ -10,6 +10,7 @@ Status: terminology for version 0.2
 | DAQ | Data-acquisition device; the network MCC unit reads thermocouples and handles digital input/output |
 | DIO | Digital input/output; individual bits control lamp, camera power, and freezer, and read the Hall sensor |
 | DN | Digital number, an image's numerical intensity value; not automatically photons, electrons, radiance, or normalized signal |
+| DRTB-2 | Omega DIN-rail thermocouple terminal-block family used inside the freezer; exact fitted type suffix remains to be recorded |
 | Edge position | Coordinate of the selected spatial transition; selection depends on ROI and edge-search mode |
 | ESF | Edge-spread function, a profile across an image edge |
 | Filter position | Wheel slot number mapped to a configured motor coordinate; not necessarily degrees or full motor steps |
@@ -24,7 +25,8 @@ Status: terminology for version 0.2
 | Offner | The optical architecture named by the owner; the detailed prescription is not supplied |
 | PNG sidecar | JSON metadata file accompanying a captured PNG image |
 | Pre-cool | Freezer-on stage before measurement; reaching the configured probe threshold completes it, while timeout aborts the test |
-| Probe | Named external temperature channel such as `probe_5`; physical attachment points remain to be confirmed |
+| Probe | Named external temperature channel. Usual probes 1–3 measure the exterior camera shell; 4 and 5 measure opposite aluminium-tray surfaces. The actual map may change per test |
+| PTFE/cage target | White PTFE backing with a black 3D-printed cage forming dark image lines; not established as a calibrated reflectance or edge-transfer standard |
 | Repeat | One complete test within an automated sequence, normally with its own test directory |
 | Repeat group | Identifier used to associate repeat tests; current default is camera ID plus date |
 | ROI | Region of interest; configured rectangular image crop, using x for columns/spatial direction and y for rows/spectral direction |

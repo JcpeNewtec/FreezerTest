@@ -10,8 +10,8 @@ import zipfile
 from pathlib import Path
 
 KB = Path(__file__).resolve().parent
-VERSION = "0.2"
-DATE = "2026-10-27"
+VERSION = "0.3"
+DATE = "2026-10-29"
 REVIEW_STATUS = "owner_review_in_progress"
 COMMIT = "df4ccebbbd0f41e32f5ae415e967728e5845d56b"
 REPO = "https://github.com/JcpeNewtec/FreezerTest"

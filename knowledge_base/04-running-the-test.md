@@ -1,10 +1,10 @@
 # Running the freezer test
 
-This chapter combines the reviewed source behavior with the owner's operating clarifications of 27 October 2026. Normal pre-cool uses **`probe_5` at 5 °C**. Filter positions are verified/calibrated before each run, and focus is adjusted manually to the target plane when the camera changes. Remaining apparatus details and environmental recovery procedures still need review. Individual test results are outside this knowledge base. [Owner review R1](10-sources-and-maintenance.md#r1-owner-review-27-october-2026).
+This chapter combines the reviewed source behavior with the owner's operating clarifications of 27 and 29 October 2026. Normal pre-cool uses **`probe_5` at 5 °C**. The freezer cools with the camera off; afterward the freezer is off while camera heat and intermittent lamp operation warm the chamber during measurement. Filter positions are verified/calibrated before each run, and focus is adjusted manually to the target plane when the camera changes. Individual test results are outside this knowledge base. [Owner review R1](10-sources-and-maintenance.md#r1-owner-review-27-october-2026), [owner review R2](10-sources-and-maintenance.md#r2-owner-review-and-component-photos-29-october-2026).
 
 ## What a run does
 
-The main entry point is `Scripts/run_long_test.py`. For each configured repeat it creates a separate test folder, starts continuous MCC temperature logging, pre-cools the freezer to a probe threshold, turns the freezer off, starts the camera and optional continuous stream, collects periodic filter sweeps, and shuts down the controlled outputs. The next repeat starts a fresh pre-cool cycle. The freezer is **not actively regulated during the measurement phase** by this runner. [Sources: run setup](../Scripts/run_long_test.py#L441), [pre-cool](../Scripts/run_long_test.py#L287), [measurement startup](../Scripts/run_long_test.py#L537), [repeat loop](../Scripts/run_long_test.py#L1025).
+The main entry point is `Scripts/run_long_test.py`. For each configured repeat it creates a separate test folder, starts continuous MCC temperature logging, pre-cools with the camera off, turns the freezer off, starts the camera and optional continuous stream, collects periodic filter sweeps, and shuts down the controlled outputs. The next repeat starts a fresh pre-cool cycle. **The camera and freezer are never on together in normal operation.** During measurement the freezer stays off; heat from the camera and lamp warms the chamber toward the end-temperature condition. The runner commands no separate heater or closed-loop temperature ramp. [Owner review R2](10-sources-and-maintenance.md#r2-owner-review-and-component-photos-29-october-2026), [run setup](../Scripts/run_long_test.py#L441), [pre-cool](../Scripts/run_long_test.py#L287), [measurement startup](../Scripts/run_long_test.py#L537), [repeat loop](../Scripts/run_long_test.py#L1025).
 
 ```text
 Initialize folder and logger
@@ -13,12 +13,13 @@ Initialize folder and logger
   → Pre-cool threshold reached; freezer off; timed settle
   → Camera on; boot wait; keepalive stream if enabled
   → Measurement clock starts
+  → Camera heat + sweep-switched lamp warm the chamber
   → Sweep → wait interval → sweep … until end condition/stop/failure
   → Stop stream; freezer off; lamp off; camera off; stop logger
   → Inter-repeat delay → next repeat
 ```
 
-The diagram represents the normal path when the relevant control features are enabled. Normal pre-cool ends when `probe_5` reaches **5 °C or below**. Pre-cooling can be skipped by configuration, sweeps can fail, and stop requests or timeouts can interrupt the path. [Owner review R1](10-sources-and-maintenance.md#r1-owner-review-27-october-2026).
+The diagram represents the normal path when the relevant control features are enabled. Normal pre-cool ends when `probe_5` reaches **5 °C or below**. The lamp is on for each sweep's 2 s warm-up and image loop, then off between sweeps; it is not continuously on during the thermal warm-up phase. Pre-cooling can be skipped by configuration, sweeps can fail, and stop requests or timeouts can interrupt the path. [Owner review R1](10-sources-and-maintenance.md#r1-owner-review-27-october-2026), [lamp control](../Scripts/run_single_sweep_remote.py#L299).
 
 ## Configuration to review before starting
 
@@ -59,9 +60,22 @@ Also check camera identity, operator, notes, filter positions, and exposures. Th
 2. **Whenever the camera is changed, manually focus it on the target plane.** Focus is an operator adjustment; the acquisition code does not perform autofocus.
 3. **Before every run, verify/calibrate the filter positions.** The owner reports that the motor's internal reference may drift. Hall homing supplies a home reference during managed sweeps, but does not replace this per-run optical-position verification.
 4. Use the calibration interface as needed, then ensure the reviewed positions are in the effective `FILTER_POSITIONS` configuration. `calibrated_filter_positions.json` is not loaded automatically by the test runner.
-5. Check the intended pre-cool threshold, camera identity/operator/notes, capture settings, storage path, and stop-file state before the preflight/acquisition sequence.
+5. Record the actual probe positions for this run, including any changes from the usual map below. Confirm which physical measurement is selected for pre-cool and measurement end.
+6. Check the intended pre-cool threshold, camera identity/operator/notes, capture settings, storage path, and stop-file state before the preflight/acquisition sequence.
 
 The manual focus and per-run calibration requirements are owner-confirmed. Their detailed acceptance criteria and adjustment method still need to be recorded. [Owner review R1](10-sources-and-maintenance.md#r1-owner-review-27-october-2026), [calibration workflow](02-hardware-and-connections.md#calibration-workflow-supported-by-the-code), [calibration save](../Scripts/calibrate_filterwheel.py#L207), [runtime position use](../Scripts/run_single_sweep_remote.py#L314).
+
+### Usual probe positions
+
+| Probe | Usual owner-reported placement |
+|---|---|
+| `probe_1` | Camera case on the side without the computer |
+| `probe_2` | Camera case on the computer side, at the hotter area |
+| `probe_3` | Side of the camera case midway between the non-computer and computer sides |
+| `probe_4` | Camera-facing top surface of an aluminium tray in the upper freezer, away from the camera and lamp |
+| `probe_5` | Underside of the same tray, away from heat sources |
+
+This is the usual arrangement, not a permanent assignment for every experiment. `probe_5` normally measures the tray underside, **not free air or camera core temperature**. A 5 °C threshold at that probe does not establish uniform camera or chamber temperature. Keep the actual run map with the test context so temperature-associated results remain interpretable. [Owner review R2](10-sources-and-maintenance.md#r2-owner-review-and-component-photos-29-october-2026).
 
 ## Starting a run
 
@@ -97,6 +111,8 @@ Successful preflight does not verify optical alignment, correct filter identity,
 7. Only now set `measurement_start_time`, calculate the end deadline, and allow the first sweep immediately.
 
 Sources: [first record](../Scripts/run_long_test.py#L266), [pre-cool sequence](../Scripts/run_long_test.py#L287), [measurement startup](../Scripts/run_long_test.py#L537), [boot wait](../Config/system_config.py#L34), [measurement clock](../Scripts/run_long_test.py#L586).
+
+The owner confirms that the operating camera and lamp provide the heat for the measurement warm-up with freezer power off. In the supplied code the camera remains powered during this phase, while the lamp is switched only for sweep capture. No lamp duty-cycle change or extra heater is implied by the thermal description. [Owner review R2](10-sources-and-maintenance.md#r2-owner-review-and-component-photos-29-october-2026), [sweep lamp sequence](../Scripts/run_single_sweep_remote.py#L299).
 
 There is no explicit probe-freshness limit, stability slope check, or finite-number validation in the threshold helper: it converts the selected value with `float()`. Pre-cool polls the latest available record rather than requiring a new record on each poll. Confirm that logged readings are advancing when interpreting a run. [Sources: conversion helper](../Scripts/run_long_test.py#L118), [pre-cool loop](../Scripts/run_long_test.py#L352).
 
@@ -167,6 +183,8 @@ Stop files do not interrupt an image capture, transfer, recovery power-cycle, fi
 
 Normal and exception cleanup attempt, in order, keepalive stop, freezer off, lamp off, optional explicit camera off, then logger stop. Output-command failures are recorded or printed. These are attempts through software control, not physical feedback proving contacts opened. The logger's own stop/disconnect path also attempts camera power off, so setting `CAMERA_POWER_OFF_AT_TEST_END=False` does **not** reliably keep the camera on in the supplied implementation. Abrupt process termination, host power loss, or broken communication cannot be assumed to execute cleanup. [Sources: runner cleanup](../Scripts/run_long_test.py#L959), [logger stop](../Control/temperature_logger.py#L44), [controller disconnect](../Control/temperature_control.py#L168).
 
+**Routine camera shutdown is by removing its power.** The owner confirms this as the accepted procedure for the rig, matching the relay-based shutdown in the runner. [Owner review R2](10-sources-and-maintenance.md#r2-owner-review-and-component-photos-29-october-2026), [camera power-off call](../Scripts/run_long_test.py#L988).
+
 Ctrl-C raises `KeyboardInterrupt`, which bypasses the runner's `except Exception` status handlers. Its `finally` cleanup is still attempted, but a saved summary can remain `running` or `precooling` without a terminal status or `end_time`. Use the documented stop-file path for a normal recorded stop; the status left in a folder is not by itself proof that a process is still running. [Exception and cleanup path](../Scripts/run_long_test.py#L945).
 
 ## Failures and recovery
@@ -175,16 +193,15 @@ Storage is checked initially and after each attempted sweep against the default 
 
 Ordinary sweep errors increment both failed-attempt count and consecutive failures. The default retry wait is 30 s; afterward the normal post-attempt sweep interval is also scheduled, so ordinary retry timing is longer than 30 s. Three consecutive ordinary failures abort by default. Successful capture resets the streak. [Sources: failure handling](../Scripts/run_long_test.py#L853), [rescheduling](../Scripts/run_long_test.py#L919), [defaults](../Config/system_config.py#L142).
 
-Automatic camera recovery matches a small set of error strings: required-memory allocation, buffer-pool activation, `VIDIOC_REQBUFS`, and device/resource-busy errors. With recovery enabled, it stops keepalive, forces lamp off, powers **only the camera** off, waits 15 s by default, powers it on, waits 45 s, and restarts keepalive. Freezer/logger/host process remain running. Up to three recoveries per test are configured by default; a successful recovery resets ordinary failure streak and schedules the next numbered sweep immediately. The failed attempt remains a failure; recovery does not recreate that same sweep index. [Sources: markers](../Scripts/run_long_test.py#L176), [recovery procedure](../Scripts/run_long_test.py#L191), [recovery decision](../Scripts/run_long_test.py#L864), [recovery defaults](../Config/system_config.py#L41).
+Automatic camera recovery matches a small set of error strings: required-memory allocation, buffer-pool activation, `VIDIOC_REQBUFS`, and device/resource-busy errors. With recovery enabled, it stops keepalive, forces lamp off, powers **only the camera** off, waits 15 s by default, powers it on, waits 45 s, and restarts keepalive. The MCC logger and host process continue; freezer control is unchanged and the freezer is normally off during measurement. Up to three recoveries per test are configured by default; a successful recovery resets ordinary failure streak and schedules the next numbered sweep immediately. The failed attempt remains a failure; recovery does not recreate that same sweep index. [Sources: markers](../Scripts/run_long_test.py#L176), [recovery procedure](../Scripts/run_long_test.py#L191), [recovery decision](../Scripts/run_long_test.py#L864), [recovery defaults](../Config/system_config.py#L41).
 
 Capture failure can leave images on the camera because transfer/removal happens only after the successful sweep block. Transfer verification checks expected filename existence, not checksums or PNG decodability. A transfer/removal failure can leave a local `sweep_summary.json` already marked `success` while the test-level event records that the attempt failed. Review both levels and file integrity before treating a partial sweep as usable. [Source: summary and transfer ordering](../Scripts/run_single_sweep_remote.py#L364).
 
 ## Physical procedure still to confirm
 
 - Detailed installation checks for the enclosure, target, optics, filters, lamp, camera, thermocouples, and cabling, plus acceptance criteria for manual focus and per-run filter-position verification/calibration.
-- Which physical point each probe measures, particularly `probe_5` used by the copied profile.
-- Whether an additional soak/stability criterion is needed beyond the owner-confirmed normal `probe_5` threshold of 5 °C; none is implemented in the reviewed runner.
-- How the freezer warms during measurement, whether its own thermostat remains relevant, and acceptable ambient conditions.
+- Record any per-run departures from the usual probe map and the detailed attachment/contact method; the usual positions are now owner-confirmed above.
+- Record ambient conditions and any additional thermal influences for each test; the owner-confirmed measurement heat sources are the camera and intermittent lamp operation with freezer power off.
 - The required compressor minimum-off behavior. `FREEZER_MIN_OFF_TIME_S=600` is used by the dedicated relay test script; the long-run `freezer_on()` path does not enforce that delay. [Sources: manual protection setting](../Config/system_config.py#L76), [relay-test wait](../Scripts/test_freezer_relay.py#L87), [direct output control](../Control/temperature_control.py#L116).
 - The required response to condensation, an out-of-range sensor, unavailable network, or a command that failed to switch an output. These procedures should come from the actual apparatus and operator experience.
 

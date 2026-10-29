@@ -1,6 +1,6 @@
 # Sources, coverage, and maintenance
 
-Version: 0.2 · Updated: 27 October 2026 · Status: owner review in progress
+Version: 0.3 · Updated: 29 October 2026 · Status: owner review in progress
 
 ## Source precedence
 
@@ -19,7 +19,7 @@ Where intent and implementation disagree, both are recorded explicitly. This dra
 
 The linked remote source is immutable at the cited commit. Markdown code links elsewhere point to the local supplied source for convenient reading; their line anchors correspond to this reviewed snapshot. Local-only configuration has no permalink in the reviewed source commit. Its exact reviewed text is preserved in [a reference snapshot](reference/local_config_snapshot.txt); this is documentation evidence, not an active configuration file.
 
-The [source manifest](source_manifest.json) retains the original SHA-256 digests/line counts for 34 reviewed Python/shell files, alongside the later local cleanup, owner-review sources, and CAD digests. Its original local-configuration digest refers to the immutable [historical snapshot](reference/local_config_snapshot.txt), not the cleaned local file. Do not index that snapshot as current procedure; its 12 °C trial and superseded variables are historical evidence. Measured temperature-log contents remain excluded.
+The [source manifest](source_manifest.json) retains the original SHA-256 digests/line counts for 34 reviewed Python/shell files, alongside the later local cleanup, owner-review sources, CAD digests and photograph inventory. Its original local-configuration digest refers to the immutable [historical snapshot](reference/local_config_snapshot.txt), not the cleaned local file. Do not index that snapshot as current procedure; its 12 °C trial and superseded variables are historical evidence. Measured temperature-log contents remain excluded.
 
 ## Project chats retrieved
 
@@ -61,7 +61,7 @@ The owner supplied the following corrections and additions in this chat. They ar
 - The three narrow bandpass filters were selected to sample widely separated portions of the camera's owner-described 400–1700 nm span. Their identities are in the hardware/analysis tables. Qtec's current published VIS-SWIR family span is 430–1700 nm; unit-specific limits still require a record.
 - Check/adjust wheel positions before each long test because the internal motor reference may drift. Manually focus on the target plane when changing cameras.
 - A NEMA 17 motor drives the wheel; the Hall sensor is on the fixed base and a magnet is on the rotating part.
-- The installed thermocouple/extension identities and the fact that connectors are inside the freezer were supplied. A distinct connector part number was not supplied.
+- The installed thermocouple/extension identities and the fact that connectors are inside the freezer were supplied. The connector-family gap was subsequently resolved in R2.
 - Six filter-wheel STL files were supplied, read, and preserved unchanged with a labeled preview and [digest inventory](reference/filterwheel-cad/inventory.json). Assembly roles, physical units, materials, and revision remain unconfirmed.
 
 ### Component references supplied in R1
@@ -73,16 +73,32 @@ The owner supplied the following corrections and additions in this chat. They ar
 | [Pololu product 3132](https://www.pololu.com/product/3132) | Tic T834 with soldered connectors; its published motor-supply range is 2.5–10.8 V, not an inferred 24 V connection. |
 | [Honeywell SL353 datasheet supplied through RS](https://docs.rs-online.com/9a79/A700000007013601.pdf) | Eight-page Honeywell datasheet, April 2015, read and relevant electrical/pin diagrams visually checked. Covers both SL353HT and SL353LT; fitted suffix remains unknown. |
 | [MCC listing supplied through DigiKey](https://www.digikey.dk/en/products/detail/digilent-inc/6069-410-025/16970338), [Digilent E-TC](https://digilent.com/shop/mcc-e-tc-thermocouple-measurement-ethernet-daq-device/) | Owner's DAQ reference identified as E-TC, part 6069-410-025; installed serial, wiring, and calibration still need records. |
-| [Labfacility XF-1275-FAR KX extension](https://dk.farnell.com/labfacility/xf-1275-far/thermocouple-wire-type-kx-10m/dp/2918721) | Extension-wire product, not the missing freezer-side connector model. |
-| [Omega 5LSC / 5SRTC family](https://dk.omega.com/pptst/5LSC_5SRTC.html), [exact IEC model listing](https://www.jp.omega.com/pptst/5LSC_5SRTC_IEC.html), owner-supplied `5SRTC-TT-KI-36-1M` | Probe identification and nominal construction; physical locations/attachment and individual calibration are still missing. |
+| [Labfacility XF-1275-FAR KX extension](https://dk.farnell.com/labfacility/xf-1275-far/thermocouple-wire-type-kx-10m/dp/2918721) | Extension-wire product; the terminal-block family is separately identified in R2. |
+| [Omega 5LSC / 5SRTC family](https://dk.omega.com/pptst/5LSC_5SRTC.html), [exact IEC model listing](https://www.jp.omega.com/pptst/5LSC_5SRTC_IEC.html), owner-supplied `5SRTC-TT-KI-36-1M` | Probe identification and nominal construction. The usual physical positions are now owner-confirmed in R2; attachment/calibration details and actual per-run changes still need records. |
 
 Vendor references were checked on 27 October 2026 where retrievable. A supplied link alone is labeled as owner evidence if its exact content could not be verified. The knowledge base summarizes relevant specifications and links to sources; it does not duplicate supplier catalogs.
+
+### R2: Owner review and component photos, 29 October 2026
+
+The owner supplied nine HEIC photographs in `Images/`, a connector reference, and these clarifications. They update the relevant chapters rather than create a competing procedure:
+
+- **Usual probe map, changeable by test:** probe 1 non-computer outer shell; 2 computer/hot outer shell; 3 side between those shell locations; 4 camera-facing/top face of the upper aluminium tray; 5 underside of that tray. Tray probes are placed away from camera and lamp. The camera is on the tray in the upper freezer.
+- **Target and light:** white PTFE chosen for reflection across the intended 400–1700 nm range, black 3D-printed cage for sharp dark image lines, and a halogen tube with silver-coated parabolic reflector directed at the target. These owner descriptions do not establish calibrated reflectance, target-edge transfer, spectrum or illumination stability.
+- **Thermal sequence:** cool with freezer on and camera off; switch freezer off at the cold threshold; then start the camera. Camera and lamp heat warm the chamber toward the endpoint. Normal operation does not power camera and freezer together. The code confirms that the lamp is sweep-switched rather than continuously on.
+- **Power and shutdown:** the owner accepts direct camera power removal as normal practice. A 5 V supply feeds MCC, Tic, network switch and Hall sensor. Two 24 V supplies separate lamp inrush from the other power arrangement after lamp startup briefly interrupted the camera. The exact XDR/NDR load assignment still needs its wiring map; the freezer appliance is rated 230 V, so low-voltage control and mains power are distinguished.
+- **Local AI:** GitHub knowledge-base access through a deploy SSH key is already working according to the owner. No credential is included here; index freshness/answer quality was not independently tested.
+
+All nine images were visually inspected. They identify Mean Well XDR-240E-24, NDR-120-24 and MDR-40-5 supplies; three Schneider SSD1D520BDC1 relays; the Allen-Bradley 100-C09E*400 Series A contactor designation; a Telenty-labelled five-port switch; SY42STH38-1684B motor; Tic T834; TEFCOLD UF400V; and halogen packaging reference 641840875. Label ratings and any hidden/uncertain identifiers are transcribed in the [photo index](reference/component-photos/README.md) and hardware chapter. Specific load assignments, coil options and unpictured model suffixes are not guessed from wire colors or family labels.
+
+The photos also show the chamber/tray and terminal arrangement. Dishes of granules are visible but their identity/effectiveness is not established by appearance. Original HEICs remain in the owner's `Images/` folder; JPEG reference copies were made for standard viewing, with orientation retained and camera metadata stripped. The [photo inventory](reference/component-photos/inventory.json) records source and published digests. No content was retouched.
+
+The owner identifies the freezer-side thermocouple terminals as the [Omega DRTB-2 series](https://www.dwyeromega.com/en-nl/thermocouple-din-rail-terminal-blocks-narrow-10-7-mm-width/p/DRTB-2). The manufacturer page confirms DIN-rail mounting, screw terminals and an integrated miniature female thermocouple connector, with variants for several thermocouple types. The application uses K-type probes, but the exact fitted DRTB suffix is not legible in the supplied evidence; a family link alone does not establish a specific SKU. This source was checked on 29 October 2026.
 
 ## Excluded and missing sources
 
 **Excluded by scope:** individual result datasets, camera performance rankings, result charts, drift diagnoses, raw historical error logs, compiled Python caches, and the root `calibration_temperature_log.jsonl` contents. Setup-related failure modes are summarized only where useful for operation or validity.
 
-**Still missing:** full older conversation histories/attachments, installed-assembly photographs/part map, remaining BOM identities, unit/revision inventory, deployed-device file hashes, probe locations/calibrations, qualification requirements, and acceptance criteria. Newly supplied CAD and component sources are included; their unanswered details are tracked in [the review register](09-review-questions-and-gaps.md).
+**Still missing:** full older conversation histories/attachments, CAD assembly/part map, complete terminal/load wiring, a few fitted suffixes, unit/revision inventory, deployed-file hashes, probe calibration/attachment details, qualification requirements and acceptance criteria. The usual probe locations, setup photograph, target/light arrangement and photographed identities are now supplied. Only unresolved details remain in [the review register](09-review-questions-and-gaps.md).
 
 No manufacturer specification is inferred from an IP address, generic component label, or a historical assistant assertion. Component identification now supports nominal filter specifications; this is distinct from measured per-filter calibration or a guarantee of installed orientation.
 
@@ -95,6 +111,8 @@ No manufacturer specification is inferred from an IP address, generic component 
 - Did **not** import hardware modules, operate equipment, run preflight, deploy camera files, change source behavior, or rerun historical analysis.
 
 For version 0.2, the owner review was reconciled across the chapters, remaining questions were narrowed, the six CAD meshes were checked for basic file integrity, source links/exports were checked, and the unused local configuration names were removed. These checks do not validate physical wiring, calibrations, acquisition reliability, numerical correctness against representative images, or local AI answer quality.
+
+For version 0.3, all nine component photos were inspected, readable labels transcribed with source links, the usual map and thermal sequence reconciled with code, answered questions removed, and reference-photo/export integrity checked. The acquisition programs and active configuration were not changed in this batch, and no equipment was operated.
 
 ## How to maintain the knowledge base
 

@@ -1,8 +1,8 @@
 # Project context and owner review
 
-Status: historical chat context retrieved on 23 October 2026; updated by owner review on 27 October 2026.
+Status: historical chat context retrieved on 23 October 2026; updated by owner reviews on 27 and 29 October 2026.
 
-This page combines setup facts recovered from three accessible project chats with the owner's subsequent clarifications. The 27 October review takes precedence where it corrects historical discussion. It does not reproduce individual result logs or camera-performance conclusions. A prior assistant suggestion is not evidence that a component was installed or a patch applied.
+This page retains useful historical context alongside the owner's later clarifications. The latest applicable owner confirmation takes precedence over an earlier suggestion or unknown. Current hardware and operating details live in their respective chapters; this page does not reproduce individual results or promote old proposals into installed features.
 
 ## Current scope and normal preparation
 
@@ -11,6 +11,8 @@ The owner confirms that the apparatus tests variants in the **Qtec Hypervision c
 Normal pre-cool uses **`probe_5` at 5 °C**. The 12 °C value in the preserved local configuration was intentionally used for a shorter recent trial. Operators verify/calibrate filter positions before every run because the internal motor reference may drift, and manually focus on the target plane whenever the camera changes. [Owner review R1](10-sources-and-maintenance.md#r1-owner-review-27-october-2026), [operating preparation](04-running-the-test.md#operator-preparation).
 
 An earlier camera warm-start workaround was abandoned after the owner traced the startup problem to faulty camera hardware, which was unacceptable. It is not part of the normal procedure or an outstanding implementation task; the reviewed runner has no warm-start feature. [Owner review R1](10-sources-and-maintenance.md#r1-owner-review-27-october-2026), [camera startup sequence](../Scripts/run_long_test.py#L559).
+
+The owner confirms the thermal sequence: freezer cooling with camera off, then freezer off before camera startup. The camera and sweep-switched lamp warm the chamber toward its endpoint; camera/freezer operation does not overlap normally. Removing camera power directly is the accepted routine shutdown practice. The usual map is exterior-shell probes 1–3 and opposite tray-surface probes 4–5, with changes allowed per test. The PTFE/cage target, halogen reflector, photographed components, and DRTB-2 connector family are now described in [hardware](02-hardware-and-connections.md). The local AI's repository access via deploy SSH key is also owner-confirmed. [Owner review R2](10-sources-and-maintenance.md#r2-owner-review-and-component-photos-29-october-2026).
 
 ## Camera construction reported by the owner
 
@@ -36,12 +38,12 @@ The local test notes contain `PC Grating Holder`. That is configured descriptive
 
 Source: **Temperature Test Control**, owner messages dated **22 April and 22 June 2026**; [T3 provenance](10-sources-and-maintenance.md#t3-temperature-test-control).
 
-- The owner described thermocouple wires and 24 V power wires passing between the freezer interior and exterior. The actual pass-through route, seals, connector types, strain relief, and wiring diagram were not confirmed.
+- The owner described thermocouple wires and 24 V power wires crossing the chamber boundary. The connector family is now identified as Omega DRTB-2; the chamber photograph shows the terminal arrangement. The exact boundary seals, fitted terminal-block suffix, strain relief, and full wiring map remain unrecorded.
 - The owner stated that the freezer has an internal fan used while cooling. Its independent control, duty cycle, direction, and operation when freezer power is switched off remain unknown.
 - Condensation on bandpass filter surfaces was explicitly reported as a setup problem associated with reduced signal and blurred spatial information at lower temperatures. This establishes a measurement-validity concern, not a quantified camera performance result.
-- The owner wanted automatic camera shutdown and overnight operation. Current relay control and repeat orchestration address parts of that intent, but the repository is the authority for what is implemented.
+- The owner wanted automatic camera shutdown and overnight operation. Relay power removal is now confirmed as accepted routine operation; the repository describes how cleanup/repeats are implemented.
 
-Earlier suggestions included desiccant, dry-air or nitrogen purge, an optical enclosure, local heating, humidity/dew-point logging, and improved cable sealing. **None of those is confirmed as installed.** The reviewed software has no humidity channel, dew-point calculation, purge control, or filter-heater loop. Their existence or absence physically must be checked with the owner.
+The chamber photograph shows dishes of granular material, but its identity and conditioning state are not confirmed. Earlier suggestions for purge, optical enclosures, local heating, humidity/dew-point logging, or improved seals are not treated as installed controls. The code has no humidity channel, dew-point calculation, purge control, or filter-heater loop. [Chamber photo](reference/component-photos/IMG_5292.jpg).
 
 The earlier assistant mentioned a 0–40 °C range without establishing a permanent specification. The preserved local profile selects 12–40 °C probe thresholds for the shorter trial, while the owner confirms normal pre-cool at 5 °C on `probe_5`. Probe thresholds are not a qualification of the chamber's full operating range. [Owner review R1](10-sources-and-maintenance.md#r1-owner-review-27-october-2026), [historical local profile](reference/local_config_snapshot.txt#L5).
 
@@ -53,7 +55,7 @@ Source: **Python script for Tic controller**, available messages dated **16–20
 
 Earlier chat responses proposed camera-device discovery and readiness changes, including a `/dev/qtec/video0` path. The present source still configures `/dev/video4`. A diagnostic script named `test_camera_boot_keepalive.py` appears in pasted historical console text but is not among the supplied source files. Do not cite historical proposed helpers as available tools in this checkout.
 
-The chat also discusses a deployed camera Python file containing NUL bytes. That is useful deployment context: the host source and remote copy may differ. The cause was not proven. Hard power removal was suggested as one possible explanation; it is not established here as the cause of file corruption. The current deployment script copies files; the knowledge base does not claim it implements atomic deployment or remote integrity verification.
+A historical deployed-file corruption problem shows why local and remote sources should be compared when diagnosing import failures; its cause was not proven. It is not a reason in this knowledge base to replace the owner's accepted direct power-cut procedure. The deployment helper copies files and does not implement atomic deployment or remote integrity verification.
 
 ### Camera storage is a staging area
 

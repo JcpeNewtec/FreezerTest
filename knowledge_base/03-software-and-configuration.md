@@ -1,6 +1,6 @@
 # Software and configuration
 
-Status: source inspected on 23 October 2026; normal procedure clarified by the owner on 27 October 2026. No hardware-control program was executed to build this documentation. The owner-confirmed normal settings and the earlier copied source profile are distinguished below. [Owner review R1](10-sources-and-maintenance.md#r1-owner-review-27-october-2026).
+Status: source inspected on 23 October 2026; normal procedure clarified by the owner on 27 and 29 October 2026. No hardware-control program was executed to build this documentation. The owner-confirmed normal settings and the earlier copied source profile are distinguished below. [Owner review R1](10-sources-and-maintenance.md#r1-owner-review-27-october-2026), [owner review R2](10-sources-and-maintenance.md#r2-owner-review-and-component-photos-29-october-2026).
 
 The 33 shared Python/shell files in the supplied local copy were verified against repository commit `df4ccebbbd0f41e32f5ae415e967728e5845d56b` dated 12 October 2026 and matched byte for byte. The additional `Config/local_config.py` was preserved as a [historical snapshot](reference/local_config_snapshot.txt). Its 12 °C pre-cool setting was a deliberate shorter trial; normal pre-cool uses `probe_5` at **5 °C**. Reproducing that old profile and preparing a normal run are different configuration choices. See [source provenance and maintenance](10-sources-and-maintenance.md) and [owner review R1](10-sources-and-maintenance.md#r1-owner-review-27-october-2026).
 
@@ -78,13 +78,21 @@ The table retains the earlier source profile for provenance. “Base” means th
 
 The implemented sequence keeps camera power off during pre-cool, switches the freezer off at the threshold, waits the settle period, and then switches camera power on for the configured 45 s boot wait. There is no camera warm-start feature in the reviewed runner. [Implemented pre-cool](../Scripts/run_long_test.py#L330), [implemented power-on](../Scripts/run_long_test.py#L559).
 
+### Thermal sequence and probe meaning
+
+The owner confirms the normal sequence: **freezer on / camera off** while cooling to the 5 °C threshold, then freezer off, the configured 60 s settle, camera on, and its configured 45 s boot wait. The camera and freezer are never on together during normal operation. Heat from the operating camera and the lamp warms the chamber during measurement toward the selected end temperature. This is the intended warm-up mechanism; the runner does not drive a separate heater or command a closed-loop temperature ramp. [Owner review R2](10-sources-and-maintenance.md#r2-owner-review-and-component-photos-29-october-2026), [pre-cool and freezer-off](../Scripts/run_long_test.py#L330), [camera startup](../Scripts/run_long_test.py#L559).
+
+The lamp's contribution is **intermittent in the reviewed software**: each managed sweep switches it on, waits 2 s, captures the configured filter images (normally four), then switches it off. It is not held on throughout the measurement phase. The owner's camera-and-lamp thermal description therefore does not imply continuous lamp power in this source revision. [Lamp sequence](../Scripts/run_single_sweep_remote.py#L299), [lamp off](../Scripts/run_single_sweep_remote.py#L344).
+
+The usual `probe_5` placement is on the underside of an aluminium tray in the upper freezer, away from camera and lamp heat; `probe_4` is on the camera-facing top of that tray. Probes 1–3 are on the camera case. These placements can change between tests, so record the actual map rather than treating a probe label as a permanent physical quantity. In particular, `probe_5` is not a free-air or camera-core reading. See [the usual probe map](02-hardware-and-connections.md#thermocouple-channels) and [operator preparation](04-running-the-test.md#operator-preparation). [Owner review R2](10-sources-and-maintenance.md#r2-owner-review-and-component-photos-29-october-2026).
+
 ### Other control, recovery and timing settings
 
 | Setting group | Current value or behavior | Source |
 |---|---|---|
-| Camera power control | Enabled; active-high DIO bit 2; 45 s boot wait; end-of-test off flag enabled. | [System settings](../Config/system_config.py#L34) |
+| Camera power control | Enabled; active-high DIO bit 2; 45 s boot wait; end-of-test off flag enabled. Removing camera power is the owner-confirmed routine shutdown method. | [System settings](../Config/system_config.py#L34), [owner review R2](10-sources-and-maintenance.md#r2-owner-review-and-component-photos-29-october-2026) |
 | Freezer control | Enabled; active-high DIO bit 3. Duplicate base declarations have the same values. | [System settings](../Config/system_config.py#L51) |
-| Lamp capture delay | 2 s after lamp-on; lamp then remains on for the sweep's image loop. | [Setting](../Config/system_config.py#L159), [sequence](../Scripts/run_single_sweep_remote.py#L299) |
+| Lamp capture delay | 2 s after lamp-on; lamp stays on for the sweep's image loop and switches off afterward. It is off between managed sweeps. | [Setting](../Config/system_config.py#L159), [sequence](../Scripts/run_single_sweep_remote.py#L299), [off](../Scripts/run_single_sweep_remote.py#L344) |
 | Acquisition retry | 30 s retry delay; maximum consecutive failures 3. | [Settings](../Config/system_config.py#L142) |
 | Storage threshold | 5 GiB (`1024**3` bytes per unit) free-space threshold on the local output filesystem. | [Setting](../Config/system_config.py#L146), [check](../Scripts/run_long_test.py#L73) |
 | Automatic camera recovery | Enabled; up to 3 per test; camera off wait 15 s, then boot wait and keepalive restoration. Triggered by recognized capture-error strings. | [Settings](../Config/system_config.py#L41), [implementation](../Scripts/run_long_test.py#L185) |
@@ -165,8 +173,8 @@ Sources: [preflight main](../Scripts/preflight_check.py#L275), [MCC preflight cl
 2. Select the intended local results path and confirm it is writable on the host actually running tests.
 3. Confirm current camera identity/operator/notes rather than carrying them into every future run unchanged. Their supplied values describe one configured run context.
 4. Check the normal `probe_5` pre-cool threshold of 5 °C; retain deliberate trial departures as explicitly identified run settings.
-5. Confirm shared-supply sequencing, actual compressor limits and whether protections should be enforced centrally.
+5. Map the two 24 V supplies and individual relays to their loads/terminals; record actual compressor limits and whether protections should be enforced centrally.
 6. Record exposure-control units/range, controller motion units and required current against the actual hardware.
 7. Choose the maintained Streamlit entry point; preserve historical repair tools as explicitly manual utilities.
-8. Record the approved physical probe map, then keep probe names and end-condition settings aligned with it.
+8. Record actual per-run probe placement and any departure from the usual map. Keep probe names and end-condition settings aligned with that record; the usual `probe_5` is a tray-underside measurement, not camera core or free air. [Owner review R2](10-sources-and-maintenance.md#r2-owner-review-and-component-photos-29-october-2026).
 9. Verify/calibrate filter positions before each run and manually focus on the target plane whenever the camera is changed. These are owner-confirmed preparation tasks; preflight does not perform them. [Owner review R1](10-sources-and-maintenance.md#r1-owner-review-27-october-2026), [operating preparation](04-running-the-test.md#operator-preparation).

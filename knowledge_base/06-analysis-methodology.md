@@ -1,6 +1,6 @@
 # Freezer test analysis methodology
 
-Status: source-derived methodology with owner clarifications from 2026-10-27; remaining validation questions are listed below. Source inspection date: 2026-10-23. This page describes methods and limitations, without reporting individual test results.
+Status: source-derived methodology with owner clarifications through 2026-10-29; remaining validation questions are listed below. Source inspection date: 2026-10-23. This page describes methods and limitations, without reporting individual test results.
 
 ## What the analysis measures
 
@@ -18,6 +18,8 @@ The owner confirmed the filter part identities on 27 October 2026, including **F
 The wavelength and FWHM numbers above are the analysis configuration's nominal values; no measured transmission curve is used by the code. Filter bandwidth in nm is metadata; the implemented measured widths and movements are in image pixels. The analysis does not convert pixel widths to wavelength resolution, remove the finite optical filter bandwidth, or establish a physical distance per pixel. For component descriptions and supplier specifications, see [hardware and connections](02-hardware-and-connections.md#filterwheel-filters-and-position-calibration). [Filter mapping](../Config/analysis_config.py#L12), [analysis dispatch and metadata](../Scripts/analyze_test_folder.py#L776).
 
 The primary quantities are spectral FWHM, spectral line position, spatial line spread function (LSF) Gaussian FWHM, spatial edge position, no-filter signal level, and dark-region level and spatial variation. Width describes the observed feature's sharpness; position tracks its movement. A change in these observables does not by itself identify which mechanical, optical, illumination, or sensor effect caused it.
+
+The target is white **PTFE**, selected by the owner for its reflectance over the approximately 400–1700 nm range. A black 3D-printed cage over the PTFE produces the sharp dark lines used as spatial features. A halogen tube and silver-coated parabolic reflector focus illumination onto the target. These are owner-confirmed construction and selection details; no measured reflectance curve, calibrated Lambertian response, or quantified target-edge quality has been supplied. The analysis does not divide by a calibrated white reference or remove the target's edge response from the measured spatial width. [Owner review R2](10-sources-and-maintenance.md#r2-owner-review-and-component-photos-29-october-2026).
 
 ## Image coordinates and current regions of interest
 
@@ -41,6 +43,8 @@ Images are loaded through Pillow into floating-point arrays. The analysis expect
 | `noise_2` | `[200, 680)` | `[540, 620)` | Background statistics in the 1550 nm filtered image |
 
 Source: [spatial region](../Config/analysis_config.py#L41), [spectral regions](../Config/analysis_config.py#L79), [signal and noise regions](../Config/analysis_config.py#L98). These coordinates describe the supplied configuration, not a permanent alignment standard. Verify them on images after changes to camera framing, optical alignment, or sensor format. The crop helper does not validate boundaries; NumPy may silently truncate an out-of-bounds crop.
+
+Check that the fixed spatial ROI crosses the intended cage-produced dark line against the white PTFE in the current framing. Also check that the signal regions sample the intended illuminated target areas and that the spectral and background regions remain suitable. Knowing the target construction does not establish that these fixed pixel coordinates select the intended features on every camera or after a focus/alignment change. [Target description and usual setup](10-sources-and-maintenance.md#r2-owner-review-and-component-photos-29-october-2026).
 
 The owner verifies the wheel positions before every long test and adjusts manual focus when the camera is changed. Record those setup checks with the run and inspect the analysis regions after a camera change. Focus or framing changes can affect width and position comparisons even when the analysis code is unchanged. The offline analyzer does not verify that these manual checks occurred. [Owner review](10-sources-and-maintenance.md#r1-owner-review-27-october-2026).
 
@@ -183,6 +187,20 @@ Configured deltas cover spectral FWHM, spectral quadratic peak position, spatial
 
 `temp_<probe-name>_c` fields come from `sweep_summary.json / temperature_before_sweep / temperatures_c`. They represent the summary's pre-sweep reading; the analyzer does not average continuously logged temperatures over exposure time. It also calculates `temp_probe_2_minus_probe_1_c` and its absolute value when both columns exist. Those derived differences are in the diagnostic table, but are not in the explicit primary-field list. [Temperature parsing](../Scripts/analyze_test_folder.py#L702), [difference columns](../Scripts/analyze_test_folder.py#L929), [primary columns](../Scripts/analyze_test_folder.py#L888).
 
+The owner's usual probe placement is:
+
+| Field | Usual measured location | Interpretation |
+| --- | --- | --- |
+| `temp_probe_1_c` | Camera outer case on the side without the computer | Local exterior case temperature |
+| `temp_probe_2_c` | Camera outer case on the computer side, described as the hotter side | Local exterior case temperature near the computer side |
+| `temp_probe_3_c` | Camera side between the probe 1 and probe 2 locations | Another local exterior case temperature |
+| `temp_probe_4_c` | Camera-facing upper surface of an aluminium tray in the upper freezer, away from the camera and lamp | Tray surface temperature |
+| `temp_probe_5_c` | Underside of the same tray, away from heat sources | Tray underside temperature; usual pre-cool/endpoint control channel |
+
+This is the owner-confirmed **usual map**, not an immutable channel assignment; record the placement used for each test. Under this map, `temp_probe_2_minus_probe_1_c` means computer-side exterior case temperature minus the opposite exterior case temperature. A positive value means the computer-side measurement is warmer. Its absolute-value field discards that direction. This is a difference between two surface readings, not a measured core-to-case gradient or a spatial gradient per unit distance. Probes 4 and 5 measure the tray surfaces; neither is a free-air probe or an internal camera/optics measurement. [Owner review R2](10-sources-and-maintenance.md#r2-owner-review-and-component-photos-29-october-2026).
+
+The test first cools with the freezer on and camera off, then measures with the freezer off and camera on. The owner describes the camera and intermittently operated lamp as heat sources during the subsequent warm-up to the endpoint. In the reviewed runner the lamp is switched on for sweep capture and off afterward, rather than held on throughout measurement. Treat the data as a transient warming history: local case, tray, and internal temperatures can differ and lag each other. Matching two samples by probe 5 alone does not prove equal camera-core or optical temperatures. The code does not impose a steady-temperature hold, a controlled heating ramp, or a correction for thermal lag. [Owner review R2](10-sources-and-maintenance.md#r2-owner-review-and-component-photos-29-october-2026), [pre-cool sequencing](../Scripts/run_long_test.py#L330), [camera startup](../Scripts/run_long_test.py#L559), [sweep lamp control](../Scripts/run_single_sweep_remote.py#L301).
+
 Camera-internal readings, if recorded in the sweep summary, are flattened as `camera_internal_<reading-label>_<sensor-name>_c`. Status and error fields are retained in diagnostics. All available camera-internal temperature columns ending `_c` are added to the primary table. Missing camera temperatures are not reconstructed from another source. [Internal-temperature parsing](../Scripts/analyze_test_folder.py#L725), [primary table inclusion](../Scripts/analyze_test_folder.py#L960).
 
 ## Repeat-cycle comparison
@@ -200,7 +218,7 @@ The four quantities are the three spectral quadratic peak positions and spatial 
 
 This aligns cycles by sweep index only. It does not interpolate onto equal temperature, elapsed time, heating/cooling branch, or thermal-equilibrium conditions; it does not register the images. Comparison at the same sweep index is therefore only a matched-condition comparison if the actual acquisition protocols and temperature histories support that interpretation.
 
-The current repeat script produces within-group position differences, and the viewers can overlay different units' metrics. They do not automatically pool units into a statistical population, separate variation within units from variation between units, correct camera-to-camera focus/alignment differences, or calculate a validated inter-unit repeatability statistic. The population definition, comparable setup conditions, and statistical treatment still need to be specified for that use. Record unit identity, hardware/design revision, manual focus adjustment, wheel verification, exposure/gain, ROI configuration, and the thermal protocol when preparing such a comparison.
+The current repeat script produces within-group position differences, and the viewers can overlay different units' metrics. They do not automatically pool units into a statistical population, separate variation within units from variation between units, correct camera-to-camera focus/alignment differences, or calculate a validated inter-unit repeatability statistic. The population definition, comparable setup conditions, and statistical treatment still need to be specified for that use. Record unit identity, hardware/design revision, manual focus adjustment, wheel verification, exposure/gain, ROI configuration, actual probe-placement map, and the thermal protocol when preparing such a comparison.
 
 Current repeat-group inference normalizes group identity to `camera_id + YYYY-MM-DD`, preferring `repeat_group_start_date`, then a date extracted from an existing group ID, then a folder timestamp, then test date. Two genuinely separate sequences from the same camera on the same date can consequently be merged. Missing an explicit shared start date can split a multi-day sequence into daily groups. [Batch group inference](../Scripts/analyze_repeat_tests.py#L120), [updated viewer group inference](../Scripts/compare_tests_streamlit_updated.py#L162).
 
@@ -208,11 +226,11 @@ The batch “cycle start” table selects the minimum sweep index across the ent
 
 ## Review items before treating the method as validated
 
-1. Confirm the physical feature used for each ROI and that the regions remain valid through the expected image movement.
+1. Verify that each ROI selects the intended PTFE/cage feature or spectral/background region in the current framing and remains valid through the expected image movement.
 2. Confirm the rationale and validation for the spatial sample locations and percentile/fit settings; filter identities and the narrow-band sampling rationale are owner-confirmed above.
 3. Establish whether the noise ROIs are free of relevant signal and whether spatial scatter is the intended noise observable.
 4. Define the exposure policy and whether signal comparisons require normalization.
 5. Specify wavelength/spatial calibration, uncertainty estimation, saturation checks, fit-quality criteria, and acceptance limits if those are required for reporting.
-6. Define matched thermal states, the unit/revision population and statistical treatment for between-unit comparisons, and how independently started same-day sequences should be identified.
+6. Define matched thermal states and treatment of case/tray/optics temperature differences and lag, the unit/revision population and statistical treatment for between-unit comparisons, and how independently started same-day sequences should be identified.
 
 These are gaps in documented experimental validation, not proposed changes already implemented in the scripts. Operational commands, output names, and known viewer issues are documented in [Analysis tools and troubleshooting](07-analysis-tools-and-troubleshooting.md).
