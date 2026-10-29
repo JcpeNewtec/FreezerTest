@@ -1,5 +1,5 @@
 {
-  "kb_version": "0.3",
+  "kb_version": "0.3.1",
   "compiled_date": "2026-10-29",
   "review_status": "owner_review_in_progress",
   "repository": "https://github.com/JcpeNewtec/FreezerTest",
@@ -356,12 +356,33 @@
         "white PTFE target with black 3D-printed cage; halogen tube and silver-coated parabolic reflector",
         "freezer cooling with camera off, followed by camera and lamp heating with freezer off",
         "camera power-cut shutdown accepted as normal practice",
-        "two 24 V supplies and shared 5 V supply; exact 24 V load allocation remains open",
+        "confirmed supply map: XDR-240E-24 powers lamp and freezer-contactor coil; NDR-120-24 powers camera; MDR-40-5 powers small components",
         "lamp startup current previously interrupted camera power; separate power arrangements",
         "relay, contactor, freezer, motor, power-supply, switch and lamp-package identities from photographs",
         "Omega DRTB-2 thermocouple terminal-block family; exact fitted suffix remains open",
         "local AI already accesses the GitHub knowledge base using a deploy SSH key"
-      ]
+      ],
+      "supply_map_follow_up": {
+        "source": "Owner reply to the supply-map question in this chat",
+        "date": "2026-10-29",
+        "XDR-240E-24": [
+          "lamp",
+          "freezer-contactor coil"
+        ],
+        "NDR-120-24": [
+          "camera"
+        ],
+        "MDR-40-5": [
+          "MCC",
+          "Tic controller",
+          "Ethernet switch",
+          "Hall sensor"
+        ],
+        "normal_operation": "Lamp and freezer never enabled simultaneously",
+        "rationale": "Lamp startup demand uses the larger XDR; camera is on the separate NDR supply",
+        "superseded_source_comment": "Scripts/calibrate_filterwheel.py:187 says contactor uses camera supply; comment no longer describes owner-confirmed wiring",
+        "acquisition_code_changed": false
+      }
     }
   ],
   "local_configuration_cleanup": {

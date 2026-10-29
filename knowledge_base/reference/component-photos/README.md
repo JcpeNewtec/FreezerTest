@@ -6,7 +6,7 @@ These owner-supplied photographs support the installed-component descriptions in
 
 | Photo | Readable identification / observation | Boundary |
 |---|---|---|
-| [IMG_5285](IMG_5285.jpg) | Mean Well **XDR-240E-24**, label 24 V / 10 A / 240 W; **NDR-120-24**, 24 V / 5 A; **MDR-40-5**, 5 V / 6 A | Owner confirms a common 5 V supply for MCC, Tic, switch and Hall sensor; exact allocation of the two 24 V units remains to be mapped. |
+| [IMG_5285](IMG_5285.jpg) | Mean Well **XDR-240E-24**, label 24 V / 10 A / 240 W; **NDR-120-24**, 24 V / 5 A; **MDR-40-5**, 5 V / 6 A | Owner confirms XDR supplies lamp and freezer-contactor coil, NDR supplies camera, and MDR supplies MCC, Tic, switch and Hall sensor. Load allocation comes from the owner follow-up, not the photo alone. |
 | [IMG_5286](IMG_5286.jpg) | Three Schneider Electric **SSD1D520BDC1** solid-state relays | Owner identifies relay functions as camera, lamp and freezer contactor; photo does not uniquely map left/middle/right to those loads. |
 | [IMG_5287](IMG_5287.jpg) | Allen-Bradley **100-C09E*400**, Series A contactor | The asterisk is printed in the pictured family designation; do not infer the exact fitted coil suffix/voltage from it. |
 | [IMG_5288](IMG_5288.jpg) | **Telenty Industrial switch**, label **5 × 10/100/1000 Mbps**, **DC 5 V / 1 A** | This is a label transcription; the exact model is hidden/not shown. |

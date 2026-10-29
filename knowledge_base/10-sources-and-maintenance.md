@@ -1,6 +1,6 @@
 # Sources, coverage, and maintenance
 
-Version: 0.3 · Updated: 29 October 2026 · Status: owner review in progress
+Version: 0.3.1 · Updated: 29 October 2026 · Status: owner review in progress
 
 ## Source precedence
 
@@ -85,10 +85,10 @@ The owner supplied nine HEIC photographs in `Images/`, a connector reference, an
 - **Usual probe map, changeable by test:** probe 1 non-computer outer shell; 2 computer/hot outer shell; 3 side between those shell locations; 4 camera-facing/top face of the upper aluminium tray; 5 underside of that tray. Tray probes are placed away from camera and lamp. The camera is on the tray in the upper freezer.
 - **Target and light:** white PTFE chosen for reflection across the intended 400–1700 nm range, black 3D-printed cage for sharp dark image lines, and a halogen tube with silver-coated parabolic reflector directed at the target. These owner descriptions do not establish calibrated reflectance, target-edge transfer, spectrum or illumination stability.
 - **Thermal sequence:** cool with freezer on and camera off; switch freezer off at the cold threshold; then start the camera. Camera and lamp heat warm the chamber toward the endpoint. Normal operation does not power camera and freezer together. The code confirms that the lamp is sweep-switched rather than continuously on.
-- **Power and shutdown:** the owner accepts direct camera power removal as normal practice. A 5 V supply feeds MCC, Tic, network switch and Hall sensor. Two 24 V supplies separate lamp inrush from the other power arrangement after lamp startup briefly interrupted the camera. The exact XDR/NDR load assignment still needs its wiring map; the freezer appliance is rated 230 V, so low-voltage control and mains power are distinguished.
+- **Power and shutdown:** the owner accepts direct camera power removal as normal practice. The follow-up to the supply-map question confirms **XDR-240E-24 → lamp and freezer-contactor coil**, **NDR-120-24 → camera**, and **MDR-40-5 → MCC, Tic, network switch and Hall sensor**. The larger XDR serves the lamp's high startup demand; lamp and freezer are never enabled together normally. Separate camera power avoids the brief camera interruption previously seen at lamp startup. The freezer appliance is rated 230 V, so its mains load is distinguished from its 24 V contactor coil. This confirmation supersedes the reviewed calibration script's comment that camera and contactor share a supply.
 - **Local AI:** GitHub knowledge-base access through a deploy SSH key is already working according to the owner. No credential is included here; index freshness/answer quality was not independently tested.
 
-All nine images were visually inspected. They identify Mean Well XDR-240E-24, NDR-120-24 and MDR-40-5 supplies; three Schneider SSD1D520BDC1 relays; the Allen-Bradley 100-C09E*400 Series A contactor designation; a Telenty-labelled five-port switch; SY42STH38-1684B motor; Tic T834; TEFCOLD UF400V; and halogen packaging reference 641840875. Label ratings and any hidden/uncertain identifiers are transcribed in the [photo index](reference/component-photos/README.md) and hardware chapter. Specific load assignments, coil options and unpictured model suffixes are not guessed from wire colors or family labels.
+All nine images were visually inspected. They identify Mean Well XDR-240E-24, NDR-120-24 and MDR-40-5 supplies; three Schneider SSD1D520BDC1 relays; the Allen-Bradley 100-C09E*400 Series A contactor designation; a Telenty-labelled five-port switch; SY42STH38-1684B motor; Tic T834; TEFCOLD UF400V; and halogen packaging reference 641840875. Label ratings and any hidden/uncertain identifiers are transcribed in the [photo index](reference/component-photos/README.md) and hardware chapter. The supply/load groups come from the owner's follow-up; individual relay-role assignments, coil options and unpictured model suffixes are not guessed from wire colors or family labels.
 
 The photos also show the chamber/tray and terminal arrangement. Dishes of granules are visible but their identity/effectiveness is not established by appearance. Original HEICs remain in the owner's `Images/` folder; JPEG reference copies were made for standard viewing, with orientation retained and camera metadata stripped. The [photo inventory](reference/component-photos/inventory.json) records source and published digests. No content was retouched.
 
@@ -113,6 +113,8 @@ No manufacturer specification is inferred from an IP address, generic component 
 For version 0.2, the owner review was reconciled across the chapters, remaining questions were narrowed, the six CAD meshes were checked for basic file integrity, source links/exports were checked, and the unused local configuration names were removed. These checks do not validate physical wiring, calibrations, acquisition reliability, numerical correctness against representative images, or local AI answer quality.
 
 For version 0.3, all nine component photos were inspected, readable labels transcribed with source links, the usual map and thermal sequence reconciled with code, answered questions removed, and reference-photo/export integrity checked. The acquisition programs and active configuration were not changed in this batch, and no equipment was operated.
+
+Version 0.3.1 incorporates the owner's supply-map follow-up, closes that allocation gap, records lamp/freezer non-overlap in normal operation, and explicitly identifies the superseded calibration-code wiring comment. Exports and links were refreshed; acquisition code and active configuration remain unchanged.
 
 ## How to maintain the knowledge base
 

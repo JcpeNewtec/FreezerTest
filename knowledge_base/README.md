@@ -1,6 +1,6 @@
 # FreezerTest knowledge base
 
-Version: **0.3 — owner review and component photographs** · Updated: **29 October 2026**
+Version: **0.3.1 — owner review, component photographs and confirmed supply map** · Updated: **29 October 2026**
 
 This knowledge base explains the FreezerTest apparatus, control software, test sequence, data, and analysis methodology. It is intended for operators, colleagues, and a local AI answering questions about the test. It describes a particular source snapshot, not a certified operating procedure or a validated hardware inventory.
 
@@ -36,7 +36,7 @@ The original code review covered **33 shared Python/shell files**, identical to 
 
 1. **Normal pre-cool ends at `probe_5 <= 5 °C`.** Probe 5 is usually attached to the underside of the upper aluminium tray. The historical 12 °C setting was for a shorter trial. Probe placement can change and must be recorded per test; neither threshold establishes thermal equilibrium of the whole camera.
 2. The test covers **Qtec Hypervision variants**, both to establish reproducibility across units and to investigate design changes. There is no single fixed reference-camera revision. Record the unit, revision, focus/setup, and run settings for meaningful comparisons.
-3. **Freezer on/camera off for cooling → freezer off → camera on for measurement.** Camera heat and intermittent lamp heat warm the chamber toward the endpoint. Normal operation never powers camera and freezer together. There is no controlled heater ramp or stability hold.
+3. **Freezer on/camera off for cooling → freezer off → camera on for measurement.** Camera heat and intermittent lamp heat warm the chamber toward the endpoint. Normal operation never powers camera and freezer together, or lamp and freezer together. The XDR powers lamp/contactor coil; the NDR powers the camera. There is no controlled heater ramp or stability hold.
 4. Analysis widths and shifts are in **pixels**. Signal and image-noise metrics are in **digital numbers (DN)**. The code does not establish calibrated spectral resolution in nm, temporal read noise, or acceptance limits.
 5. Preflight and diagnostic scripts can switch real outputs. They are not all read-only checks. Do not run them alongside an acquisition.
 

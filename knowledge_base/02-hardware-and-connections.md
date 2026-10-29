@@ -45,7 +45,7 @@ The diagram is a logical interface map. It does not specify load-side power wiri
 | Illumination | Box reference **641840875**, **24–28 V, 100 W, 118 mm R7S ECO HALOGEN**; owner describes silver-coated parabolic reflector focusing the light. DIO bit 0 switches the lamp, with 2 s configured capture delay. | Brand, installed operating voltage/current, spectral output, optical alignment/distances and measured warm-up stability. |
 | Freezer and contactor | **Tefcold UF400V** freezer; photographed **Allen-Bradley 100-C09E\*400, Series A** contactor marking. DIO bit 3 controls freezer enable; freezer is off during measurement. | Exact contactor coil suffix/rating, load-side wiring and compressor/controller operating requirements. The printed asterisk is not a resolved coil code. |
 | Switching relays | Three photographed **Schneider Electric SSD1D520BDC1** solid-state relays. Software switches lamp, camera power and freezer control through DIO. | Mapping of each physical relay to its load, contactor-coil circuit and exact terminal wiring. |
-| DC supplies | **Mean Well XDR-240E-24**, **NDR-120-24** and **MDR-40-5**; label ratings and owner-confirmed rails are recorded below. | Which named 24 V supply feeds lamp, camera and contactor coil; as-built protection and common/reference wiring. |
+| DC supplies | **Mean Well XDR-240E-24** supplies lamp and freezer-contactor coil; **NDR-120-24** supplies camera; **MDR-40-5** supplies small components. | As-built protection, terminal numbers and common/reference wiring. |
 | Ethernet switch | **Telenty industrial switch**, labelled **5 × 10/100/1000 Mbps**, **DC 5 V 1 A**. | Exact model is hidden by cabling; port allocation. |
 | Camera mounting, grating and target | Camera stands on the aluminium tray inside the freezer. Owner describes white **PTFE** target with black **3D-printed cage**, plus the Offner construction below. | Dimensioned optical/mechanical drawing, cage material, grating properties, distances and orientation. |
 
@@ -57,7 +57,7 @@ The owner's camera description is approximately **400–1700 nm**. Qtec's public
 
 Digilent identifies **6069-410-025** as **MCC E-TC**, with eight thermocouple inputs, 24-bit conversion, maximum 4 samples/s/channel and eight digital I/O. These are device capabilities, not the project's logging cadence or whole-chain accuracy. The code's logger requests a nominal 1 s interval. [Digilent E-TC product page](https://digilent.com/shop/mcc-e-tc-thermocouple-measurement-ethernet-daq-device/), [logger interval](../Control/temperature_logger.py#L21).
 
-Pololu identifies item **3132** as the **Tic T834 with soldered connectors**, using a DRV8834 driver. Its manufacturer supply range is **2.5–10.8 V**, with approximately **1.5 A continuous per phase** without additional cooling. The owner confirms that the installed controller uses the **5 V rail**. The 24 V camera/contactor circuit is a separate supply arrangement. The photographed board also carries the **Tic T834** marking. [Pololu 3132](https://www.pololu.com/product/3132), [board photograph](reference/component-photos/IMG_5290.jpg), [29 October review](10-sources-and-maintenance.md#r2-owner-review-and-component-photos-29-october-2026).
+Pololu identifies item **3132** as the **Tic T834 with soldered connectors**, using a DRV8834 driver. Its manufacturer supply range is **2.5–10.8 V**, with approximately **1.5 A continuous per phase** without additional cooling. The owner confirms that the installed controller uses the **5 V rail**; the two 24 V supplies serve the lamp/contactor and camera loads listed below. The photographed board also carries the **Tic T834** marking. [Pololu 3132](https://www.pololu.com/product/3132), [board photograph](reference/component-photos/IMG_5290.jpg), [29 October review](10-sources-and-maintenance.md#r2-owner-review-and-component-photos-29-october-2026).
 
 ## Chamber, illumination and thermal arrangement
 
@@ -107,17 +107,19 @@ The recorded `lamp_state`, `freezer_state`, and `camera_power_state` represent t
 
 ### Power supplies and switching arrangement
 
-The supply photograph establishes three installed Mean Well models and their label outputs:
+The supply photograph establishes the installed Mean Well models and label outputs; the owner's follow-up confirms the load groups:
 
-- **XDR-240E-24:** 24 V, 10 A, 240 W maximum label marking; adjustment marking 24–29 VDC.
-- **NDR-120-24:** 24 V, 5 A label output, equivalent to 120 W nominal.
-- **MDR-40-5:** 5 V, 6 A label output. Do not interpret the “40” in its model name as the photographed 5 V unit's output power.
+| Supply | Label output | Owner-confirmed loads |
+|---|---|---|
+| **XDR-240E-24** | 24 V, 10 A, 240 W; adjustment marking 24–29 VDC | Lamp and freezer-contactor coil |
+| **NDR-120-24** | 24 V, 5 A | Camera |
+| **MDR-40-5** | 5 V, 6 A | MCC unit, Tic controller, network switch and Hall sensor |
 
-The owner confirms that the **5 V rail powers the small devices: MCC unit, Tic controller, network switch and Hall sensor**. Two separate 24 V supplies are fitted because lamp turn-on inrush previously caused a brief camera reset when supply power was shared. The owner reports separating the lamp supply from other power, but the exact assignment of **XDR versus NDR to lamp, camera and freezer-contactor coil** is still to be labelled in a wiring drawing. The freezer itself is a 230 V appliance; a 24 V contactor-control supply is not its mains load supply. [Supply photograph](reference/component-photos/IMG_5285.jpg), [freezer nameplate](reference/component-photos/IMG_5293.jpg), [owner review](10-sources-and-maintenance.md#r2-owner-review-and-component-photos-29-october-2026).
+The larger **XDR** is used for the lamp because of its high startup current. The lamp shares that supply with the freezer-contactor coil, and **lamp and freezer are never enabled together in normal operation**. The camera has its own **NDR** supply because lamp startup previously interrupted camera power when they shared a supply. These are the owner's confirmed load allocation and operating practice, not measured inrush values or a hardware interlock. The freezer appliance itself is rated **230 V**; the XDR powers its contactor coil, not the freezer's mains load. Do not interpret the “40” in the MDR model name as this 5 V unit's output power. [Supply photograph](reference/component-photos/IMG_5285.jpg), [freezer nameplate](reference/component-photos/IMG_5293.jpg), [owner review and follow-up](10-sources-and-maintenance.md#r2-owner-review-and-component-photos-29-october-2026).
 
 The panel contains **three Schneider Electric SSD1D520BDC1 SSRs** and an **Allen-Bradley contactor marked 100-C09E\*400, Series A**. Photographs identify the hardware but do not map the individual SSRs to DIO/load functions or resolve the contactor coil option represented by the printed asterisk. [SSR photograph](reference/component-photos/IMG_5286.jpg), [contactor photograph](reference/component-photos/IMG_5287.jpg).
 
-A calibration-code comment states that the freezer contactor uses the camera 24 V supply and turns the freezer off before camera power on. The owner independently confirms the normal camera/freezer exclusion sequence. The low-level `camera_power_on()` and `freezer_on()` methods do not implement a mutual interlock; normal pre-cool sequencing is enforced higher in the test program. Retain the code comment as source context while completing the actual labelled supply/load map. [Calibration sequence](../Scripts/calibrate_filterwheel.py#L181), [low-level outputs](../Control/temperature_control.py#L116), [pre-cool sequencing](../Scripts/run_long_test.py#L330).
+A calibration-code comment says that the freezer contactor uses the camera's 24 V supply. **That wiring comment is superseded by the owner's confirmed map above:** the contactor shares the XDR with the lamp, while the camera uses the NDR. The calibration action still turns the freezer off before camera power on, consistent with normal camera/freezer exclusion. Low-level output methods do not enforce camera/freezer or lamp/freezer mutual interlocks; normal sequencing is handled higher in the test program. The reviewed acquisition code has not been changed by this documentation correction. [Calibration comment and action](../Scripts/calibrate_filterwheel.py#L187), [low-level outputs](../Control/temperature_control.py#L108), [pre-cool sequencing](../Scripts/run_long_test.py#L330).
 
 ## Thermocouple channels
 
@@ -205,7 +207,7 @@ The camera-side code states that this camera's sensor-temperature control update
 
 1. Annotate the supplied chamber photograph with probe labels and optical-path dimensions; record exact attachment details and any run-specific placement changes.
 2. Per-test camera/revision and serial records, MCC/controller serials, SL353HT/LT suffix, motor electrical datasheet, lamp brand, switch model and contactor coil option.
-3. Wiring drawing assigning each named 24 V supply and SSR to its load, with connector/terminal numbers, logic references and load-side switching.
+3. Wiring drawing recording the confirmed supply/load groups and identifying each physical SSR, with connector/terminal numbers, logic references and load-side switching.
 4. Individual filter transmission certificates/lot records, grating/lens/holder details, target dimensions and cage material.
 5. Temperature calibration/uncertainty evidence, wheel alignment/repeatability check, illumination stabilization evidence and camera exposure-control units.
 6. Confirmed operating temperature bounds and the actual camera/TEC initialization and control behavior.

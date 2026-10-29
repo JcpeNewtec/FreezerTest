@@ -42,7 +42,7 @@ flowchart TD
     LOCAL --> ANALYSIS
 ```
 
-This is a software-level diagram. The diagram does not establish electrical isolation, relay contact ratings, a shared power-supply topology, or physical component locations. The [hardware page](02-hardware-and-connections.md) distinguishes those unknowns from configured connections.
+This is a software-level diagram. The [hardware page](02-hardware-and-connections.md) records the owner-confirmed supply/load groups and usual physical arrangement; detailed terminal wiring, protection and relay-role assignments still need an as-built drawing.
 
 ## Acquisition hierarchy
 

@@ -1,6 +1,6 @@
 # Using the knowledge base with a local AI
 
-Status: existing GitHub connection, content/version guide · Version: 0.3
+Status: existing GitHub connection, content/version guide · Version: 0.3.1
 
 The owner confirms that the **local AI accesses this knowledge base through GitHub using a deploy SSH key**. Its application/importer/model details and the version it has indexed have not been inspected here. No new connection or key is needed for this documentation update. After a repository update, let the existing sync/index process refresh and check that answers reflect the new version. [Owner review R2](10-sources-and-maintenance.md#r2-owner-review-and-component-photos-29-october-2026).
 
@@ -21,7 +21,7 @@ Keep the source manifest and `reference/` files available as evidence, but do no
 
 The following instruction can be adapted to the local AI's knowledge or retrieval settings:
 
-> Answer FreezerTest questions from the retrieved knowledge-base passages and cite their document/section. Version 0.3 includes owner reviews through 29 October 2026; the older acquisition-source snapshot does not prove deployed-file identity. Distinguish usual setup, actual per-run settings, code behavior, photographed labels, and unknowns. Normal pre-cool is 5 °C on probe_5, usually on the tray underside; the old 12 °C profile was a shorter trial. Usual probes 1–3 measure the exterior case and 4–5 opposite tray surfaces; placements may change by test. The freezer cools with camera off, then switches off before camera startup; camera and intermittent lamp heat warm the chamber. Direct camera power removal is the owner's accepted normal shutdown. The target is white PTFE with a black printed cage, illuminated by a reflected halogen tube; it is not established as a calibrated reflectance standard. Cameras are Hypervision variants, not one fixed reference build. Do not invent missing facts, individual results, or permissions to operate equipment.
+> Answer FreezerTest questions from the retrieved knowledge-base passages and cite their document/section. Version 0.3.1 includes owner reviews and the supply-map follow-up through 29 October 2026; the older acquisition-source snapshot does not prove deployed-file identity. Distinguish usual setup, actual per-run settings, code behavior, photographed labels, and unknowns. Normal pre-cool is 5 °C on probe_5, usually on the tray underside; the old 12 °C profile was a shorter trial. Usual probes 1–3 measure the exterior case and 4–5 opposite tray surfaces; placements may change by test. The freezer cools with camera off, then switches off before camera startup; camera and intermittent lamp heat warm the chamber. XDR supplies lamp and contactor coil; NDR supplies camera. Lamp and freezer do not run together normally. Direct camera power removal is the owner's accepted normal shutdown. The target is white PTFE with a black printed cage, illuminated by a reflected halogen tube; it is not established as a calibrated reflectance standard. Cameras are Hypervision variants, not one fixed reference build. Do not invent missing facts, individual results, or permissions to operate equipment.
 
 For an AI with equipment-control tools, answering an operational question does not itself authorize executing the command. This corpus includes hardware-active command examples, especially preflight, calibration, diagnostics, and the runner. Indexing documentation should not trigger them.
 
@@ -41,6 +41,7 @@ Use these as manual checks. The expected answers summarize the reviewed snapshot
 | Are camera and freezer on together, and is the lamp continuously on? | No overlap in normal operation. The lamp is on for sweep captures and off between sweeps; documents 03, 04 |
 | What forms the image target? | White PTFE plus a black 3D-printed cage, illuminated by a halogen tube and silver-coated parabolic reflector; no calibrated reflectance/target-transfer function is supplied; documents 02, 06 |
 | How is the camera normally shut down? | By removing power, accepted by the owner as routine practice; documents 03, 04 |
+| Which supply powers each load, and why are there two 24 V supplies? | XDR-240E-24: lamp and freezer-contactor coil; NDR-120-24: camera; MDR-40-5: MCC, Tic, switch and Hall sensor. Lamp inrush previously interrupted shared camera power; lamp/freezer do not run together normally. The older camera/contactor shared-supply code comment is superseded; documents 02, 10 |
 | Is 120 seconds the exact image-to-image cadence? | No; configured wait is scheduled after a sweep, so capture and transfer take additional time; document 04 |
 | Which filters and exposure settings are configured? | No filter, Thorlabs FBH780-3, FLH1064-3, FBH1550-4; historical exposure control values 3000, 15000, 8000, 15000; confirm per run; documents 01–03 |
 | What units are the spectral width and shift in? | Pixels; no wavelength calibration or filter deconvolution is implemented; document 06 |

@@ -19,7 +19,7 @@ Initialize folder and logger
   → Inter-repeat delay → next repeat
 ```
 
-The diagram represents the normal path when the relevant control features are enabled. Normal pre-cool ends when `probe_5` reaches **5 °C or below**. The lamp is on for each sweep's 2 s warm-up and image loop, then off between sweeps; it is not continuously on during the thermal warm-up phase. Pre-cooling can be skipped by configuration, sweeps can fail, and stop requests or timeouts can interrupt the path. [Owner review R1](10-sources-and-maintenance.md#r1-owner-review-27-october-2026), [lamp control](../Scripts/run_single_sweep_remote.py#L299).
+The diagram represents the normal path when the relevant control features are enabled. Normal pre-cool ends when `probe_5` reaches **5 °C or below**. The lamp is on for each sweep's 2 s warm-up and image loop, then off between sweeps; it is not continuously on during the thermal warm-up phase. **Lamp and freezer are never enabled together in normal operation**, as the owner also confirms in the supply-map follow-up. Pre-cooling can be skipped by configuration, sweeps can fail, and stop requests or timeouts can interrupt the path. [Owner review R1](10-sources-and-maintenance.md#r1-owner-review-27-october-2026), [owner follow-up R2](10-sources-and-maintenance.md#r2-owner-review-and-component-photos-29-october-2026), [lamp control](../Scripts/run_single_sweep_remote.py#L299).
 
 ## Configuration to review before starting
 

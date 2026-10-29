@@ -10,7 +10,7 @@ import zipfile
 from pathlib import Path
 
 KB = Path(__file__).resolve().parent
-VERSION = "0.3"
+VERSION = "0.3.1"
 DATE = "2026-10-29"
 REVIEW_STATUS = "owner_review_in_progress"
 COMMIT = "df4ccebbbd0f41e32f5ae415e967728e5845d56b"

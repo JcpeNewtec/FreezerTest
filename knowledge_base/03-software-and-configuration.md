@@ -173,7 +173,7 @@ Sources: [preflight main](../Scripts/preflight_check.py#L275), [MCC preflight cl
 2. Select the intended local results path and confirm it is writable on the host actually running tests.
 3. Confirm current camera identity/operator/notes rather than carrying them into every future run unchanged. Their supplied values describe one configured run context.
 4. Check the normal `probe_5` pre-cool threshold of 5 °C; retain deliberate trial departures as explicitly identified run settings.
-5. Map the two 24 V supplies and individual relays to their loads/terminals; record actual compressor limits and whether protections should be enforced centrally.
+5. Record terminal wiring for the confirmed supply groups (XDR: lamp/contactor coil; NDR: camera), identify individual physical relays, and record actual compressor limits and whether protections should be enforced centrally.
 6. Record exposure-control units/range, controller motion units and required current against the actual hardware.
 7. Choose the maintained Streamlit entry point; preserve historical repair tools as explicitly manual utilities.
 8. Record actual per-run probe placement and any departure from the usual map. Keep probe names and end-condition settings aligned with that record; the usual `probe_5` is a tray-underside measurement, not camera core or free air. [Owner review R2](10-sources-and-maintenance.md#r2-owner-review-and-component-photos-29-october-2026).

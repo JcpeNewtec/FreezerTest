@@ -1,6 +1,6 @@
 # FreezerTest knowledge base — portable edition
 
-Version 0.3 · Owner review in progress · 2026-10-29
+Version 0.3.1 · Owner review in progress · 2026-10-29
 
 Generated from the canonical Markdown pages. Import this file OR another export, not both.
 
@@ -10,7 +10,7 @@ Generated from the canonical Markdown pages. Import this file OR another export,
 <a id="doc-README-freezertest-knowledge-base"></a>
 # FreezerTest knowledge base
 
-Version: **0.3 — owner review and component photographs** · Updated: **29 October 2026**
+Version: **0.3.1 — owner review, component photographs and confirmed supply map** · Updated: **29 October 2026**
 
 This knowledge base explains the FreezerTest apparatus, control software, test sequence, data, and analysis methodology. It is intended for operators, colleagues, and a local AI answering questions about the test. It describes a particular source snapshot, not a certified operating procedure or a validated hardware inventory.
 
@@ -49,7 +49,7 @@ The original code review covered **33 shared Python/shell files**, identical to 
 
 1. **Normal pre-cool ends at `probe_5 <= 5 °C`.** Probe 5 is usually attached to the underside of the upper aluminium tray. The historical 12 °C setting was for a shorter trial. Probe placement can change and must be recorded per test; neither threshold establishes thermal equilibrium of the whole camera.
 2. The test covers **Qtec Hypervision variants**, both to establish reproducibility across units and to investigate design changes. There is no single fixed reference-camera revision. Record the unit, revision, focus/setup, and run settings for meaningful comparisons.
-3. **Freezer on/camera off for cooling → freezer off → camera on for measurement.** Camera heat and intermittent lamp heat warm the chamber toward the endpoint. Normal operation never powers camera and freezer together. There is no controlled heater ramp or stability hold.
+3. **Freezer on/camera off for cooling → freezer off → camera on for measurement.** Camera heat and intermittent lamp heat warm the chamber toward the endpoint. Normal operation never powers camera and freezer together, or lamp and freezer together. The XDR powers lamp/contactor coil; the NDR powers the camera. There is no controlled heater ramp or stability hold.
 4. Analysis widths and shifts are in **pixels**. Signal and image-noise metrics are in **digital numbers (DN)**. The code does not establish calibrated spectral resolution in nm, temporal read noise, or acceptance limits.
 5. Preflight and diagnostic scripts can switch real outputs. They are not all read-only checks. Do not run them alongside an acquisition.
 
@@ -114,7 +114,7 @@ flowchart TD
     LOCAL --> ANALYSIS
 ```
 
-This is a software-level diagram. The diagram does not establish electrical isolation, relay contact ratings, a shared power-supply topology, or physical component locations. The [hardware page](#doc-02-hardware-and-connections) distinguishes those unknowns from configured connections.
+This is a software-level diagram. The [hardware page](#doc-02-hardware-and-connections) records the owner-confirmed supply/load groups and usual physical arrangement; detailed terminal wiring, protection and relay-role assignments still need an as-built drawing.
 
 <a id="doc-01-purpose-and-system-overview-acquisition-hierarchy"></a>
 ## Acquisition hierarchy
@@ -224,7 +224,7 @@ The diagram is a logical interface map. It does not specify load-side power wiri
 | Illumination | Box reference **641840875**, **24–28 V, 100 W, 118 mm R7S ECO HALOGEN**; owner describes silver-coated parabolic reflector focusing the light. DIO bit 0 switches the lamp, with 2 s configured capture delay. | Brand, installed operating voltage/current, spectral output, optical alignment/distances and measured warm-up stability. |
 | Freezer and contactor | **Tefcold UF400V** freezer; photographed **Allen-Bradley 100-C09E\*400, Series A** contactor marking. DIO bit 3 controls freezer enable; freezer is off during measurement. | Exact contactor coil suffix/rating, load-side wiring and compressor/controller operating requirements. The printed asterisk is not a resolved coil code. |
 | Switching relays | Three photographed **Schneider Electric SSD1D520BDC1** solid-state relays. Software switches lamp, camera power and freezer control through DIO. | Mapping of each physical relay to its load, contactor-coil circuit and exact terminal wiring. |
-| DC supplies | **Mean Well XDR-240E-24**, **NDR-120-24** and **MDR-40-5**; label ratings and owner-confirmed rails are recorded below. | Which named 24 V supply feeds lamp, camera and contactor coil; as-built protection and common/reference wiring. |
+| DC supplies | **Mean Well XDR-240E-24** supplies lamp and freezer-contactor coil; **NDR-120-24** supplies camera; **MDR-40-5** supplies small components. | As-built protection, terminal numbers and common/reference wiring. |
 | Ethernet switch | **Telenty industrial switch**, labelled **5 × 10/100/1000 Mbps**, **DC 5 V 1 A**. | Exact model is hidden by cabling; port allocation. |
 | Camera mounting, grating and target | Camera stands on the aluminium tray inside the freezer. Owner describes white **PTFE** target with black **3D-printed cage**, plus the Offner construction below. | Dimensioned optical/mechanical drawing, cage material, grating properties, distances and orientation. |
 
@@ -237,7 +237,7 @@ The owner's camera description is approximately **400–1700 nm**. Qtec's public
 
 Digilent identifies **6069-410-025** as **MCC E-TC**, with eight thermocouple inputs, 24-bit conversion, maximum 4 samples/s/channel and eight digital I/O. These are device capabilities, not the project's logging cadence or whole-chain accuracy. The code's logger requests a nominal 1 s interval. [Digilent E-TC product page](https://digilent.com/shop/mcc-e-tc-thermocouple-measurement-ethernet-daq-device/), [logger interval](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Control/temperature_logger.py#L21).
 
-Pololu identifies item **3132** as the **Tic T834 with soldered connectors**, using a DRV8834 driver. Its manufacturer supply range is **2.5–10.8 V**, with approximately **1.5 A continuous per phase** without additional cooling. The owner confirms that the installed controller uses the **5 V rail**. The 24 V camera/contactor circuit is a separate supply arrangement. The photographed board also carries the **Tic T834** marking. [Pololu 3132](https://www.pololu.com/product/3132), [board photograph](../reference/component-photos/IMG_5290.jpg), [29 October review](#doc-10-sources-and-maintenance-r2-owner-review-and-component-photos-29-october-2026).
+Pololu identifies item **3132** as the **Tic T834 with soldered connectors**, using a DRV8834 driver. Its manufacturer supply range is **2.5–10.8 V**, with approximately **1.5 A continuous per phase** without additional cooling. The owner confirms that the installed controller uses the **5 V rail**; the two 24 V supplies serve the lamp/contactor and camera loads listed below. The photographed board also carries the **Tic T834** marking. [Pololu 3132](https://www.pololu.com/product/3132), [board photograph](../reference/component-photos/IMG_5290.jpg), [29 October review](#doc-10-sources-and-maintenance-r2-owner-review-and-component-photos-29-october-2026).
 
 <a id="doc-02-hardware-and-connections-chamber-illumination-and-thermal-arrangement"></a>
 ## Chamber, illumination and thermal arrangement
@@ -292,17 +292,19 @@ The recorded `lamp_state`, `freezer_state`, and `camera_power_state` represent t
 <a id="doc-02-hardware-and-connections-power-supplies-and-switching-arrangement"></a>
 ### Power supplies and switching arrangement
 
-The supply photograph establishes three installed Mean Well models and their label outputs:
+The supply photograph establishes the installed Mean Well models and label outputs; the owner's follow-up confirms the load groups:
 
-- **XDR-240E-24:** 24 V, 10 A, 240 W maximum label marking; adjustment marking 24–29 VDC.
-- **NDR-120-24:** 24 V, 5 A label output, equivalent to 120 W nominal.
-- **MDR-40-5:** 5 V, 6 A label output. Do not interpret the “40” in its model name as the photographed 5 V unit's output power.
+| Supply | Label output | Owner-confirmed loads |
+|---|---|---|
+| **XDR-240E-24** | 24 V, 10 A, 240 W; adjustment marking 24–29 VDC | Lamp and freezer-contactor coil |
+| **NDR-120-24** | 24 V, 5 A | Camera |
+| **MDR-40-5** | 5 V, 6 A | MCC unit, Tic controller, network switch and Hall sensor |
 
-The owner confirms that the **5 V rail powers the small devices: MCC unit, Tic controller, network switch and Hall sensor**. Two separate 24 V supplies are fitted because lamp turn-on inrush previously caused a brief camera reset when supply power was shared. The owner reports separating the lamp supply from other power, but the exact assignment of **XDR versus NDR to lamp, camera and freezer-contactor coil** is still to be labelled in a wiring drawing. The freezer itself is a 230 V appliance; a 24 V contactor-control supply is not its mains load supply. [Supply photograph](../reference/component-photos/IMG_5285.jpg), [freezer nameplate](../reference/component-photos/IMG_5293.jpg), [owner review](#doc-10-sources-and-maintenance-r2-owner-review-and-component-photos-29-october-2026).
+The larger **XDR** is used for the lamp because of its high startup current. The lamp shares that supply with the freezer-contactor coil, and **lamp and freezer are never enabled together in normal operation**. The camera has its own **NDR** supply because lamp startup previously interrupted camera power when they shared a supply. These are the owner's confirmed load allocation and operating practice, not measured inrush values or a hardware interlock. The freezer appliance itself is rated **230 V**; the XDR powers its contactor coil, not the freezer's mains load. Do not interpret the “40” in the MDR model name as this 5 V unit's output power. [Supply photograph](../reference/component-photos/IMG_5285.jpg), [freezer nameplate](../reference/component-photos/IMG_5293.jpg), [owner review and follow-up](#doc-10-sources-and-maintenance-r2-owner-review-and-component-photos-29-october-2026).
 
 The panel contains **three Schneider Electric SSD1D520BDC1 SSRs** and an **Allen-Bradley contactor marked 100-C09E\*400, Series A**. Photographs identify the hardware but do not map the individual SSRs to DIO/load functions or resolve the contactor coil option represented by the printed asterisk. [SSR photograph](../reference/component-photos/IMG_5286.jpg), [contactor photograph](../reference/component-photos/IMG_5287.jpg).
 
-A calibration-code comment states that the freezer contactor uses the camera 24 V supply and turns the freezer off before camera power on. The owner independently confirms the normal camera/freezer exclusion sequence. The low-level `camera_power_on()` and `freezer_on()` methods do not implement a mutual interlock; normal pre-cool sequencing is enforced higher in the test program. Retain the code comment as source context while completing the actual labelled supply/load map. [Calibration sequence](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/calibrate_filterwheel.py#L181), [low-level outputs](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Control/temperature_control.py#L116), [pre-cool sequencing](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/run_long_test.py#L330).
+A calibration-code comment says that the freezer contactor uses the camera's 24 V supply. **That wiring comment is superseded by the owner's confirmed map above:** the contactor shares the XDR with the lamp, while the camera uses the NDR. The calibration action still turns the freezer off before camera power on, consistent with normal camera/freezer exclusion. Low-level output methods do not enforce camera/freezer or lamp/freezer mutual interlocks; normal sequencing is handled higher in the test program. The reviewed acquisition code has not been changed by this documentation correction. [Calibration comment and action](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/calibrate_filterwheel.py#L187), [low-level outputs](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Control/temperature_control.py#L108), [pre-cool sequencing](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/run_long_test.py#L330).
 
 <a id="doc-02-hardware-and-connections-thermocouple-channels"></a>
 ## Thermocouple channels
@@ -397,7 +399,7 @@ The camera-side code states that this camera's sensor-temperature control update
 
 1. Annotate the supplied chamber photograph with probe labels and optical-path dimensions; record exact attachment details and any run-specific placement changes.
 2. Per-test camera/revision and serial records, MCC/controller serials, SL353HT/LT suffix, motor electrical datasheet, lamp brand, switch model and contactor coil option.
-3. Wiring drawing assigning each named 24 V supply and SSR to its load, with connector/terminal numbers, logic references and load-side switching.
+3. Wiring drawing recording the confirmed supply/load groups and identifying each physical SSR, with connector/terminal numbers, logic references and load-side switching.
 4. Individual filter transmission certificates/lot records, grating/lens/holder details, target dimensions and cage material.
 5. Temperature calibration/uncertainty evidence, wheel alignment/repeatability check, illumination stabilization evidence and camera exposure-control units.
 6. Confirmed operating temperature bounds and the actual camera/TEC initialization and control behavior.
@@ -595,7 +597,7 @@ Sources: [preflight main](https://github.com/JcpeNewtec/FreezerTest/blob/df4cceb
 2. Select the intended local results path and confirm it is writable on the host actually running tests.
 3. Confirm current camera identity/operator/notes rather than carrying them into every future run unchanged. Their supplied values describe one configured run context.
 4. Check the normal `probe_5` pre-cool threshold of 5 °C; retain deliberate trial departures as explicitly identified run settings.
-5. Map the two 24 V supplies and individual relays to their loads/terminals; record actual compressor limits and whether protections should be enforced centrally.
+5. Record terminal wiring for the confirmed supply groups (XDR: lamp/contactor coil; NDR: camera), identify individual physical relays, and record actual compressor limits and whether protections should be enforced centrally.
 6. Record exposure-control units/range, controller motion units and required current against the actual hardware.
 7. Choose the maintained Streamlit entry point; preserve historical repair tools as explicitly manual utilities.
 8. Record actual per-run probe placement and any departure from the usual map. Keep probe names and end-condition settings aligned with that record; the usual `probe_5` is a tray-underside measurement, not camera core or free air. [Owner review R2](#doc-10-sources-and-maintenance-r2-owner-review-and-component-photos-29-october-2026).
@@ -629,7 +631,7 @@ Initialize folder and logger
   → Inter-repeat delay → next repeat
 ```
 
-The diagram represents the normal path when the relevant control features are enabled. Normal pre-cool ends when `probe_5` reaches **5 °C or below**. The lamp is on for each sweep's 2 s warm-up and image loop, then off between sweeps; it is not continuously on during the thermal warm-up phase. Pre-cooling can be skipped by configuration, sweeps can fail, and stop requests or timeouts can interrupt the path. [Owner review R1](#doc-10-sources-and-maintenance-r1-owner-review-27-october-2026), [lamp control](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/run_single_sweep_remote.py#L299).
+The diagram represents the normal path when the relevant control features are enabled. Normal pre-cool ends when `probe_5` reaches **5 °C or below**. The lamp is on for each sweep's 2 s warm-up and image loop, then off between sweeps; it is not continuously on during the thermal warm-up phase. **Lamp and freezer are never enabled together in normal operation**, as the owner also confirms in the supply-map follow-up. Pre-cooling can be skipped by configuration, sweeps can fail, and stop requests or timeouts can interrupt the path. [Owner review R1](#doc-10-sources-and-maintenance-r1-owner-review-27-october-2026), [owner follow-up R2](#doc-10-sources-and-maintenance-r2-owner-review-and-component-photos-29-october-2026), [lamp control](https://github.com/JcpeNewtec/FreezerTest/blob/df4ccebbbd0f41e32f5ae415e967728e5845d56b/Scripts/run_single_sweep_remote.py#L299).
 
 <a id="doc-04-running-the-test-configuration-to-review-before-starting"></a>
 ## Configuration to review before starting
@@ -1611,7 +1613,7 @@ This register contains unanswered details after both owner-review batches. The u
 | ID | Question / gap | Why it matters | Current evidence |
 |---|---|---|---|
 | A01 | Is the reviewed source the version currently deployed on the host and on each camera? | Local source does not prove deployed-file identity | [Software](#doc-03-software-and-configuration) |
-| A04 | Map each 24 V supply to lamp/camera/contactor coil and each pictured relay to its load; identify the contactor's fitted coil option | Normal sequencing, 5 V allocation, and part families are confirmed; these load/terminal assignments are not visible completely | [Hardware](#doc-02-hardware-and-connections), [photos](../reference/component-photos/README.md) |
+| A04 | Map each pictured relay to its load/terminals and identify the contactor's fitted coil option | Supply groups are resolved: XDR powers lamp/contactor coil, NDR powers camera, MDR powers small devices. Physical relay-role/terminal details remain open | [Hardware](#doc-02-hardware-and-connections), [photos](../reference/component-photos/README.md) |
 | A05 | What compressor minimum-off time is required by the actual freezer? Is protection built into the appliance/contactor? | The configured 600-second value is not a general interlock in the long-test runner | [Operations](#doc-04-running-the-test) |
 | A07 | What endpoint, repeat count, and sweep wait are standard, and which are chosen per experiment? | Normal cold threshold is resolved as 5 °C; the historical profile's other settings remain run-specific | [Configuration](#doc-03-software-and-configuration) |
 | A08 | Which device path and driver/firmware versions are valid on the actual camera? | Current code fixes `/dev/video4`; historical device-discovery proposals are not present | [Context](#doc-08-project-context) |
@@ -1679,7 +1681,7 @@ When a question is resolved, edit the relevant canonical page first, record the 
 <a id="doc-10-sources-and-maintenance-sources-coverage-and-maintenance"></a>
 # Sources, coverage, and maintenance
 
-Version: 0.3 · Updated: 29 October 2026 · Status: owner review in progress
+Version: 0.3.1 · Updated: 29 October 2026 · Status: owner review in progress
 
 <a id="doc-10-sources-and-maintenance-source-precedence"></a>
 ## Source precedence
@@ -1774,10 +1776,10 @@ The owner supplied nine HEIC photographs in `Images/`, a connector reference, an
 - **Usual probe map, changeable by test:** probe 1 non-computer outer shell; 2 computer/hot outer shell; 3 side between those shell locations; 4 camera-facing/top face of the upper aluminium tray; 5 underside of that tray. Tray probes are placed away from camera and lamp. The camera is on the tray in the upper freezer.
 - **Target and light:** white PTFE chosen for reflection across the intended 400–1700 nm range, black 3D-printed cage for sharp dark image lines, and a halogen tube with silver-coated parabolic reflector directed at the target. These owner descriptions do not establish calibrated reflectance, target-edge transfer, spectrum or illumination stability.
 - **Thermal sequence:** cool with freezer on and camera off; switch freezer off at the cold threshold; then start the camera. Camera and lamp heat warm the chamber toward the endpoint. Normal operation does not power camera and freezer together. The code confirms that the lamp is sweep-switched rather than continuously on.
-- **Power and shutdown:** the owner accepts direct camera power removal as normal practice. A 5 V supply feeds MCC, Tic, network switch and Hall sensor. Two 24 V supplies separate lamp inrush from the other power arrangement after lamp startup briefly interrupted the camera. The exact XDR/NDR load assignment still needs its wiring map; the freezer appliance is rated 230 V, so low-voltage control and mains power are distinguished.
+- **Power and shutdown:** the owner accepts direct camera power removal as normal practice. The follow-up to the supply-map question confirms **XDR-240E-24 → lamp and freezer-contactor coil**, **NDR-120-24 → camera**, and **MDR-40-5 → MCC, Tic, network switch and Hall sensor**. The larger XDR serves the lamp's high startup demand; lamp and freezer are never enabled together normally. Separate camera power avoids the brief camera interruption previously seen at lamp startup. The freezer appliance is rated 230 V, so its mains load is distinguished from its 24 V contactor coil. This confirmation supersedes the reviewed calibration script's comment that camera and contactor share a supply.
 - **Local AI:** GitHub knowledge-base access through a deploy SSH key is already working according to the owner. No credential is included here; index freshness/answer quality was not independently tested.
 
-All nine images were visually inspected. They identify Mean Well XDR-240E-24, NDR-120-24 and MDR-40-5 supplies; three Schneider SSD1D520BDC1 relays; the Allen-Bradley 100-C09E*400 Series A contactor designation; a Telenty-labelled five-port switch; SY42STH38-1684B motor; Tic T834; TEFCOLD UF400V; and halogen packaging reference 641840875. Label ratings and any hidden/uncertain identifiers are transcribed in the [photo index](../reference/component-photos/README.md) and hardware chapter. Specific load assignments, coil options and unpictured model suffixes are not guessed from wire colors or family labels.
+All nine images were visually inspected. They identify Mean Well XDR-240E-24, NDR-120-24 and MDR-40-5 supplies; three Schneider SSD1D520BDC1 relays; the Allen-Bradley 100-C09E*400 Series A contactor designation; a Telenty-labelled five-port switch; SY42STH38-1684B motor; Tic T834; TEFCOLD UF400V; and halogen packaging reference 641840875. Label ratings and any hidden/uncertain identifiers are transcribed in the [photo index](../reference/component-photos/README.md) and hardware chapter. The supply/load groups come from the owner's follow-up; individual relay-role assignments, coil options and unpictured model suffixes are not guessed from wire colors or family labels.
 
 The photos also show the chamber/tray and terminal arrangement. Dishes of granules are visible but their identity/effectiveness is not established by appearance. Original HEICs remain in the owner's `Images/` folder; JPEG reference copies were made for standard viewing, with orientation retained and camera metadata stripped. The [photo inventory](../reference/component-photos/inventory.json) records source and published digests. No content was retouched.
 
@@ -1805,6 +1807,8 @@ For version 0.2, the owner review was reconciled across the chapters, remaining 
 
 For version 0.3, all nine component photos were inspected, readable labels transcribed with source links, the usual map and thermal sequence reconciled with code, answered questions removed, and reference-photo/export integrity checked. The acquisition programs and active configuration were not changed in this batch, and no equipment was operated.
 
+Version 0.3.1 incorporates the owner's supply-map follow-up, closes that allocation gap, records lamp/freezer non-overlap in normal operation, and explicitly identifies the superseded calibration-code wiring comment. Exports and links were refreshed; acquisition code and active configuration remain unchanged.
+
 <a id="doc-10-sources-and-maintenance-how-to-maintain-the-knowledge-base"></a>
 ## How to maintain the knowledge base
 
@@ -1825,7 +1829,7 @@ The first source snapshot remains recorded in `source_manifest.json`. An edited 
 <a id="doc-11-local-ai-guide-using-the-knowledge-base-with-a-local-ai"></a>
 # Using the knowledge base with a local AI
 
-Status: existing GitHub connection, content/version guide · Version: 0.3
+Status: existing GitHub connection, content/version guide · Version: 0.3.1
 
 The owner confirms that the **local AI accesses this knowledge base through GitHub using a deploy SSH key**. Its application/importer/model details and the version it has indexed have not been inspected here. No new connection or key is needed for this documentation update. After a repository update, let the existing sync/index process refresh and check that answers reflect the new version. [Owner review R2](#doc-10-sources-and-maintenance-r2-owner-review-and-component-photos-29-october-2026).
 
@@ -1848,7 +1852,7 @@ Keep the source manifest and `reference/` files available as evidence, but do no
 
 The following instruction can be adapted to the local AI's knowledge or retrieval settings:
 
-> Answer FreezerTest questions from the retrieved knowledge-base passages and cite their document/section. Version 0.3 includes owner reviews through 29 October 2026; the older acquisition-source snapshot does not prove deployed-file identity. Distinguish usual setup, actual per-run settings, code behavior, photographed labels, and unknowns. Normal pre-cool is 5 °C on probe_5, usually on the tray underside; the old 12 °C profile was a shorter trial. Usual probes 1–3 measure the exterior case and 4–5 opposite tray surfaces; placements may change by test. The freezer cools with camera off, then switches off before camera startup; camera and intermittent lamp heat warm the chamber. Direct camera power removal is the owner's accepted normal shutdown. The target is white PTFE with a black printed cage, illuminated by a reflected halogen tube; it is not established as a calibrated reflectance standard. Cameras are Hypervision variants, not one fixed reference build. Do not invent missing facts, individual results, or permissions to operate equipment.
+> Answer FreezerTest questions from the retrieved knowledge-base passages and cite their document/section. Version 0.3.1 includes owner reviews and the supply-map follow-up through 29 October 2026; the older acquisition-source snapshot does not prove deployed-file identity. Distinguish usual setup, actual per-run settings, code behavior, photographed labels, and unknowns. Normal pre-cool is 5 °C on probe_5, usually on the tray underside; the old 12 °C profile was a shorter trial. Usual probes 1–3 measure the exterior case and 4–5 opposite tray surfaces; placements may change by test. The freezer cools with camera off, then switches off before camera startup; camera and intermittent lamp heat warm the chamber. XDR supplies lamp and contactor coil; NDR supplies camera. Lamp and freezer do not run together normally. Direct camera power removal is the owner's accepted normal shutdown. The target is white PTFE with a black printed cage, illuminated by a reflected halogen tube; it is not established as a calibrated reflectance standard. Cameras are Hypervision variants, not one fixed reference build. Do not invent missing facts, individual results, or permissions to operate equipment.
 
 For an AI with equipment-control tools, answering an operational question does not itself authorize executing the command. This corpus includes hardware-active command examples, especially preflight, calibration, diagnostics, and the runner. Indexing documentation should not trigger them.
 
@@ -1869,6 +1873,7 @@ Use these as manual checks. The expected answers summarize the reviewed snapshot
 | Are camera and freezer on together, and is the lamp continuously on? | No overlap in normal operation. The lamp is on for sweep captures and off between sweeps; documents 03, 04 |
 | What forms the image target? | White PTFE plus a black 3D-printed cage, illuminated by a halogen tube and silver-coated parabolic reflector; no calibrated reflectance/target-transfer function is supplied; documents 02, 06 |
 | How is the camera normally shut down? | By removing power, accepted by the owner as routine practice; documents 03, 04 |
+| Which supply powers each load, and why are there two 24 V supplies? | XDR-240E-24: lamp and freezer-contactor coil; NDR-120-24: camera; MDR-40-5: MCC, Tic, switch and Hall sensor. Lamp inrush previously interrupted shared camera power; lamp/freezer do not run together normally. The older camera/contactor shared-supply code comment is superseded; documents 02, 10 |
 | Is 120 seconds the exact image-to-image cadence? | No; configured wait is scheduled after a sweep, so capture and transfer take additional time; document 04 |
 | Which filters and exposure settings are configured? | No filter, Thorlabs FBH780-3, FLH1064-3, FBH1550-4; historical exposure control values 3000, 15000, 8000, 15000; confirm per run; documents 01–03 |
 | What units are the spectral width and shift in? | Pixels; no wavelength calibration or filter deconvolution is implemented; document 06 |
@@ -1896,7 +1901,7 @@ The existing deploy key is a credential of the AI's connection, not knowledge-ba
 <a id="doc-12-glossary-glossary"></a>
 # Glossary
 
-Status: terminology for version 0.3
+Status: terminology for version 0.3.1
 
 | Term | Meaning here |
 |---|---|
