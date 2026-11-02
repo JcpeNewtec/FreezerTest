@@ -1,0 +1,225 @@
+Acquisition reconciliation — 2 November 2026
+
+Baseline and evidence
+---------------------
+Target: JcpeNewtec/FreezerTest main, commit
+4ba5433280c1599eadfd26c4026e240570840598 (verified against live GitHub).
+Review branch: codex/acquisition-mcc-safety. Main is not modified.
+
+The original FreezerTest(7).zip was recovered from the referenced chat.
+Its Git HEAD is df4ccebbbd0f41e32f5ae415e967728e5845d56b.
+Comparing actual source bytes, the later local modifications are exactly:
+  Config/system_config.py
+  Control/camera_keepalive_stream.py
+  Scripts/run_long_test.py
+  Scripts/run_single_sweep_remote.py
+The ZIP also contains an untracked Scripts/test_camera_boot_keepalive.py.
+Scripts/deploy_camera_scripts.sh differs only in executable permissions.
+The virtual environment, measurement logs, ignored local_config.py and accidental
+bytecode/permission changes are not imported into this branch.
+
+The original mcc_connection_resilience.patch and modified-file ZIP are not
+available in the recovered chat attachments. The MCC implementation here is
+rebuilt from the earlier answer's documented requirements, not a byte-for-byte
+application of that missing patch. Its behavior is checked by the new tests.
+The actual ULDAQ exception API and error codes were checked in the SDK bundled
+inside ZIP7 (ULException.error_code, not errorcode).
+
+Three-version comparison
+------------------------
+GitHub main:
+  Contains the knowledge base through v0.3.1.
+  Has the older SSH keepalive invocation and basic startup checks.
+  Does not include the four later local acquisition changes.
+  Shares MCC access between logger and Hall/output callers without complete
+  serialization. Has no automatic MCC reconnect. Shutdown suppresses failures.
+  Has no active camera warm-start implementation.
+
+Local ZIP7:
+  Based on the older acquisition commit df4cceb, before the knowledge base.
+  Adds stdin-based SSH scripts, V4L2 readiness polling, bounded startup retries,
+  stream diagnostics, process identity/zombie checks, startup camera recovery,
+  a shared recovery count across startup/sweeps, and sweep restart validation.
+  Adds an attended camera-boot diagnostic (untracked).
+  Retains the same unsafe MCC concurrency and shutdown behavior as main.
+  Its private local_config.py has three obsolete warm-start settings, but the
+  ZIP7 runner does not consume them. That feature is already inactive there.
+
+Merged review branch:
+  Uses current main as the base and preserves every knowledge_base file.
+  Integrates all four substantive ZIP7 acquisition changes and its diagnostic.
+  Rebuilds MCC recovery/safe shutdown, adds hardware-free regression tests,
+  adds an attended MCC reconnect diagnostic, and strengthens error handling.
+  Includes no camera power-on threshold or streaming during pre-cool.
+  Retains ordinary freezer pre-cooling, lamp warmup, the normal camera boot
+  delay AFTER pre-cool, and camera power-cycle recovery during measurement.
+  The hardware fix does not eliminate the need for normal SSH/device readiness.
+
+Exact file scope and purpose
+----------------------------
+Config/system_config.py:
+  Adds ZIP7 readiness defaults: timeout 180 s, poll 5 s, 6 start attempts,
+  10 s retry delay and 60 diagnostic log lines.
+  Adds MCC defaults: automatic recovery enabled, 10 reconnect attempts,
+  2 s delay, 2 command retries, 30 shutdown attempts with 2 s retry delay.
+  Removes CAMERA_POWER_OFF_AT_TEST_END: the old logger.stop() already switched
+  the camera off regardless of that toggle. Final cleanup now always requests
+  OFF for every enabled controlled output.
+  Keeps existing local overrides, including the default keepalive setting False.
+
+Control/camera_keepalive_stream.py:
+  Imports the ZIP7 implementation: bash -s/stdin SSH, stale-stream cleanup,
+  readiness polling, start retries, detailed failure events, identity checks.
+  Additionally converts subprocess SSH timeouts to failed results (code 124),
+  allowing readiness retries and higher-level recovery instead of escaping
+  before those mechanisms can run. Nonzero SSH status cannot report running.
+
+Control/temperature_control.py:
+  Serializes every MCC operation using a controller-level reentrant lock,
+  including direct controller users outside TemperatureLogger.
+  Classifies connection errors using real ULDAQ numeric codes; individual open
+  thermocouples/range faults remain per-probe errors without reconnect storms.
+  Releases failed/partial handles, rediscovers the same configured MCC, restores
+  DIO directions, output intent and thermocouple configuration, then retries.
+  Initial connection explicitly requests OFF on all enabled outputs, including
+  camera power; previous code left the initial camera output unspecified.
+  Updates requested output state before I/O so retrying OFF cannot restore ON.
+  Tracks requested states separately from successful output commands; unknown
+  states become null after connection release.
+  Re-reads complete temperature snapshots after a connection failure rather
+  than returning a partial snapshot with values from two connection sessions.
+  Provides connection status and reconnect counters.
+
+Control/temperature_logger.py:
+  Serializes background reads with Hall/output operations.
+  Waits for its worker to exit before disconnect/release (no five-second race).
+  Uses interruptible interval waiting; returns explicit shutdown evidence.
+  Adds shutdown/status APIs and connection information on logger errors.
+
+Scripts/run_long_test.py:
+  Integrates ZIP7 startup recovery and shared recovery accounting.
+  Treats failed keepalive restarts as recoverable camera errors.
+  Fails pre-cool if lamp/camera OFF cannot be commanded; does not merely warn
+  and then turn the freezer ON.
+  Performs resilient all-output shutdown, records connection status before and
+  after logger stop and preserves the final shutdown record.
+  Marks unconfirmed cleanup unsafe_shutdown and stops the entire repeat
+  sequence even when REPEAT_CONTINUE_AFTER_FAILURE=True. A summary write
+  failure cannot bypass that stop condition.
+  Records KeyboardInterrupt as aborted and cleans up; SIGTERM enters the same
+  cleanup path when launched through main(). SIGKILL/power loss cannot do so.
+
+Scripts/run_single_sweep_remote.py:
+  Integrates ZIP7 validation of keepalive restart; a stopped keepalive cannot
+  silently count as a successful sweep. Failure propagates to camera recovery.
+
+Scripts/test_camera_boot_keepalive.py:
+  Imports the ZIP7 attended cold-boot/readiness diagnostic; cleanup now uses
+  safe logger shutdown, reports its result and fails on unconfirmed OFF.
+
+Scripts/test_mcc_reconnect.py:
+  Adds an attended network reconnect diagnostic with every output latched OFF.
+  Reads temperatures/Hall and prints connection state; Ctrl+C performs and
+  reports safe shutdown. Does not intentionally turn on freezer/lamp/camera.
+
+tests/test_acquisition_safety.py:
+  Adds simulated MCC/SSH/orchestrator regression coverage. No hardware calls.
+
+docs/acquisition_reconciliation.txt:
+  This comparison, installation guidance and validation limits.
+
+Shutdown semantics
+-------------------
+Before shutdown I/O, latch freezer/lamp/camera requests OFF together. Future ON
+commands on that controller are rejected, including across reconnects. A fresh
+controller is needed for the next repeat.
+
+Attempt freezer, lamp and camera OFF independently. A failed freezer command
+must not prevent trying the lamp and camera. Do not require a successful
+thermocouple reading to attempt output shutdown. Reconnects use only OFF intent.
+Read back each enabled MCC digital output against its configured OFF polarity.
+
+safe_outputs_off_confirmed=true means MCC digital output readback matched OFF.
+It does NOT prove relay contacts opened or camera supply voltage is zero.
+Disabled outputs are explicitly listed and excluded from that confirmation;
+software cannot shut down equipment configured outside its control.
+Permanent MCC/network loss is recorded as unconfirmed, never successful.
+
+The runner makes an initial safe-output pass and logger.stop() performs a final
+pass after joining the logger thread. The final pass determines the final
+confirmation; both records remain available. Each pass allows up to 30 attempts.
+Attempt limits are not hard wall-clock deadlines: discovery uses a 5 s timeout,
+SDK operations and SSH operations also consume time, and stop waits for in-flight
+work. Existing thermal/time cutoffs are checked between operations/sweeps; this
+patch does not create an independent real-time thermal watchdog.
+
+Final summary fields:
+  final_safe_output_shutdown_record
+    safe_outputs_off_confirmed, confirmation_scope, disabled_outputs, attempts,
+    connection_status
+  logger_stop_safe_output_record
+  mcc_connection_status_before_logger_stop
+  mcc_connection_status_after_logger_stop
+Success temperature records include mcc_reconnect_count. Logger errors include
+mcc_connection_status. Legacy separate final_*_off_record fields are replaced
+by the combined shutdown record.
+
+Validation and limits
+---------------------
+26 hardware-free regression tests pass on Python 3.13, including:
+  transient loss with intent restoration; probe faults; disabled reconnect;
+  OFF intent ordering; permanent loss; active-low and disabled outputs;
+  one-output failure while other OFF commands continue; readback mismatch;
+  shutdown latch and later reconnect; partial-handle cleanup; concurrent MCC
+  calls; logger join/release; SSH stdin/timeouts/readiness/start retries;
+  success/error/interrupt cleanup; repeat abort; disk-error abort protection;
+  startup recovery accounting; sweep restart failure and lamp/wheel cleanup;
+  pre-cool OFF failure; absence of warm-start runner/config symbols.
+All changed/new Python files compile. Generated remote shell scripts are checked
+with bash -n. Patch applicability is checked on the exact main baseline and
+knowledge_base is verified unchanged. No camera/MCC/freezer was connected here.
+Python 3.10 on the test PC and physical DIO readback remain to be verified there.
+No camera-side source or deployment script content changes; no camera redeploy
+is required for this host-side patch.
+
+Test-PC installation (review branch, no main overwrite)
+-------------------------------------------------------
+Keep the existing test-PC directory as a backup, including all uncommitted code
+and its private local_config.py. Prefer a fresh sibling clone for this review:
+
+  cd ~/python_dir/Python_scripts
+  git clone --branch codex/acquisition-mcc-safety \
+    https://github.com/JcpeNewtec/FreezerTest.git FreezerTest_review
+  cp FreezerTest/Config/local_config.py FreezerTest_review/Config/local_config.py
+  cd FreezerTest_review
+
+Adjust the old directory path above if your checkout is elsewhere. Continue
+using the test PC's existing Python environment/dependencies.
+In the copied local_config.py, remove the three obsolete assignments and their
+warm-start comments:
+  PRECOOL_CAMERA_WARM_START_ENABLED
+  PRECOOL_CAMERA_WARM_START_SENSOR_NAME
+  PRECOOL_CAMERA_WARM_START_C
+Also remove CAMERA_POWER_OFF_AT_TEST_END if present; final OFF is mandatory.
+Keep the other private settings (paths, probes, thresholds, keepalive, exposure,
+repeat settings) as appropriate. Private settings are not in the review branch.
+
+Run automated checks without touching the equipment:
+  PYTHONPYCACHEPREFIX=/tmp/freezertest-check python3 -m unittest discover -s tests -v
+
+Then, while present at the equipment, run:
+  PYTHONPATH=. python3 Scripts/test_mcc_reconnect.py
+Disconnect only the MCC Ethernet cable for 5–10 s, reconnect, verify readings
+resume, stop with Ctrl+C and inspect the final safe-output record/readback.
+Then, if keepalive is used:
+  PYTHONPATH=. python3 Scripts/test_camera_boot_keepalive.py
+Finally run one short complete thermal cycle with REPEAT_TEST_COUNT=1 and inspect
+final_safe_output_shutdown_record.safe_outputs_off_confirmed in test_summary.json,
+plus physically confirm the camera/lamp/freezer are OFF before unattended use.
+
+Alternative patch installation on clean main at the stated SHA:
+  git switch -c review/acquisition-mcc-safety
+  git apply --check /path/to/freezertest-reconciled.patch
+  git apply /path/to/freezertest-reconciled.patch
+Do not layer it on ZIP7 or the previous MCC/warm-start patches: those changes
+are reconciled here against current main already.
