@@ -36,7 +36,6 @@ CAMERA_POWER_CONTROL_ENABLED = True
 CAMERA_POWER_DIO_BIT = 2
 CAMERA_POWER_ACTIVE_STATE = 1
 CAMERA_POWER_BOOT_WAIT_S = 45.0
-CAMERA_POWER_OFF_AT_TEST_END = True
 
 # Automatic camera recovery for long unattended tests.
 # Some V4L2/GStreamer failures (for example buffer-pool/CMA allocation
@@ -109,6 +108,15 @@ CAMERA_KEEPALIVE_STREAM_LOG_FILE = "/tmp/freezertest_keepalive_stream.log"
 CAMERA_KEEPALIVE_KILL_STALE_ON_START = True
 CAMERA_KEEPALIVE_STOP_BEFORE_SWEEP = True
 CAMERA_KEEPALIVE_RESTART_AFTER_SWEEP = True
+
+# Keepalive start robustness after a cold camera boot. The fixed camera boot
+# delay is followed by an actual V4L2 readiness check and several stream-start
+# attempts. Failed events include the remote stream log and device diagnostics.
+CAMERA_KEEPALIVE_DEVICE_READY_TIMEOUT_S = 180.0
+CAMERA_KEEPALIVE_DEVICE_READY_POLL_S = 5.0
+CAMERA_KEEPALIVE_START_MAX_ATTEMPTS = 6
+CAMERA_KEEPALIVE_START_RETRY_DELAY_S = 10.0
+CAMERA_KEEPALIVE_LOG_TAIL_LINES = 60
 # Give the kernel/driver a little time to release V4L2 mmap/DMA buffers after
 # the keepalive process stops before a still-capture pipeline is opened.
 CAMERA_CAPTURE_DEVICE_RELEASE_WAIT_S = 2.0
@@ -165,6 +173,14 @@ TEST_NOTES = ""
 
 
 
+
+# MCC recovery limits (attempt counts, not elapsed-time guarantees).
+MCC_AUTO_RECONNECT_ENABLED = True
+MCC_RECONNECT_MAX_ATTEMPTS = 10
+MCC_RECONNECT_DELAY_S = 2.0
+MCC_COMMAND_RETRY_COUNT = 2
+MCC_SAFE_SHUTDOWN_RECONNECT_ATTEMPTS = 30
+MCC_SAFE_SHUTDOWN_RETRY_DELAY_S = 2.0
 
 try:
     from Config.local_config import *

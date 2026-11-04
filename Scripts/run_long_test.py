@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import json
+import signal
 import shutil
 import time
 from datetime import datetime, timedelta
@@ -32,7 +33,6 @@ from Config.system_config import (
     LAMP_WARMUP_S,
     CAMERA_POWER_CONTROL_ENABLED,
     CAMERA_POWER_BOOT_WAIT_S,
-    CAMERA_POWER_OFF_AT_TEST_END,
     CAMERA_AUTO_RECOVERY_ENABLED,
     CAMERA_AUTO_RECOVERY_MAX_PER_TEST,
     CAMERA_AUTO_RECOVERY_POWER_OFF_WAIT_S,
@@ -54,6 +54,10 @@ from Config.system_config import (
     REPEAT_CONTINUE_AFTER_FAILURE,
     REPEAT_STOP_FILE_NAME,
 )
+
+
+class UnsafeShutdownError(RuntimeError):
+    """Always stop repeats when controlled outputs cannot be confirmed OFF."""
 
 
 def iso_now() -> str:
@@ -179,6 +183,8 @@ RECOVERABLE_CAMERA_ERROR_MARKERS = (
     "vidioc_reqbufs returned -1",
     "device or resource busy",
     "device '/dev/video4' is busy",
+    "keepalive stream failed to restart",
+    "camera keepalive stream did not start",
 )
 
 
@@ -328,19 +334,12 @@ def precool_freezer(
     append_event(log_path, test_summary, start_event, summary_path)
 
     try:
-        # Camera and lamp must be off while freezer is cooling.
-        try:
-            print("Ensuring lamp is OFF before pre-cool...")
-            temp_logger.lamp_off()
-        except Exception as e:
-            print(f"Could not explicitly turn lamp OFF before pre-cool: {e}")
-
+        # Failure to establish OFF is fatal; do not cool with the camera ON.
+        print("Ensuring lamp is OFF before pre-cool...")
+        temp_logger.lamp_off()
         if CAMERA_POWER_CONTROL_ENABLED:
-            try:
-                print("Ensuring camera power is OFF before pre-cool...")
-                temp_logger.camera_power_off()
-            except Exception as e:
-                print(f"Could not explicitly turn camera OFF before pre-cool: {e}")
+            print("Ensuring camera power is OFF before pre-cool...")
+            temp_logger.camera_power_off()
 
         print("Turning freezer ON...")
         freezer_on_record = temp_logger.freezer_on()
@@ -534,6 +533,9 @@ def run_one_test(
         f"{Path(LOCAL_DATA_ROOT) / REPEAT_STOP_FILE_NAME}"
     )
 
+    # Counts both startup recovery and any later sweep-time recoveries.
+    camera_recovery_count = 0
+
     try:
         print("Starting temperature logger...")
         temp_logger.start()
@@ -578,10 +580,40 @@ def run_one_test(
             write_json(summary_path, test_summary)
 
             if not keepalive_start_event.get("running", False):
-                raise RuntimeError(
-                    "Camera keepalive stream did not start. "
-                    f"Event: {keepalive_start_event}"
-                )
+                if (
+                    CAMERA_AUTO_RECOVERY_ENABLED
+                    and CAMERA_POWER_CONTROL_ENABLED
+                    and camera_recovery_count
+                    < int(CAMERA_AUTO_RECOVERY_MAX_PER_TEST)
+                ):
+                    camera_recovery_count += 1
+                    print(
+                        "Initial keepalive startup failed after all retries. "
+                        f"Starting camera recovery {camera_recovery_count}/"
+                        f"{CAMERA_AUTO_RECOVERY_MAX_PER_TEST}..."
+                    )
+
+                    recovery_event = recover_camera_capture_path(
+                        temp_logger=temp_logger,
+                        camera_keepalive_stream=camera_keepalive_stream,
+                        repeat_index=repeat_index,
+                        sweep_index=0,
+                    )
+                    recovery_event["recovery_context"] = (
+                        "measurement_start_keepalive"
+                    )
+                    test_summary["camera_auto_recovery_count"] = (
+                        camera_recovery_count
+                    )
+                    test_summary["camera_auto_recovery_events"].append(
+                        recovery_event
+                    )
+                    write_json(summary_path, test_summary)
+                else:
+                    raise RuntimeError(
+                        "Camera keepalive stream did not start after all "
+                        f"configured attempts. Event: {keepalive_start_event}"
+                    )
 
         test_end_mode = normalized_test_end_mode()
         if test_end_mode == "temperature":
@@ -636,8 +668,6 @@ def run_one_test(
         next_trigger_time = datetime.now()
         sweep_index = 1
         consecutive_failures = 0
-        camera_recovery_count = 0
-
         end_temp_consecutive_reads = 0
         end_temp_last_record_identity = None
         end_temp_last_valid_c = None
@@ -947,13 +977,13 @@ def run_one_test(
             test_summary["completion_reason"] = "max_sweeps"
             test_summary["end_time"] = iso_now()
 
-    except Exception as e:
+    except (Exception, KeyboardInterrupt) as e:
         test_summary["status"] = "aborted"
         test_summary["end_time"] = iso_now()
         test_summary["fatal_error"] = str(e)
         print(f"Long test aborted: {e}")
 
-        if not REPEAT_CONTINUE_AFTER_FAILURE:
+        if isinstance(e, KeyboardInterrupt) or not REPEAT_CONTINUE_AFTER_FAILURE:
             raise
 
     finally:
@@ -968,37 +998,37 @@ def run_one_test(
                 print(f"Failed to stop camera keepalive stream: {e}")
                 test_summary["camera_keepalive_stream_stop_error"] = str(e)
 
-        # Always remove cooling first.
         try:
-            print("Ensuring freezer is OFF...")
-            freezer_off_record = temp_logger.freezer_off()
-            test_summary["final_freezer_off_record"] = freezer_off_record
-        except Exception as e:
-            print(f"Failed to turn freezer OFF: {e}")
-            test_summary["final_freezer_off_error"] = str(e)
-
-        try:
-            print("Ensuring lamp is OFF...")
-            lamp_off_record = temp_logger.lamp_off()
-            test_summary["final_lamp_off_record"] = lamp_off_record
-        except Exception as e:
-            print(f"Failed to turn lamp OFF: {e}")
-            test_summary["final_lamp_off_error"] = str(e)
-
-        if CAMERA_POWER_CONTROL_ENABLED and CAMERA_POWER_OFF_AT_TEST_END:
-            try:
-                print("Turning camera power OFF...")
-                camera_power_off_record = temp_logger.camera_power_off()
-                test_summary["camera_power_off_record"] = camera_power_off_record
-            except Exception as e:
-                print(f"Failed to turn camera power OFF: {e}")
-                test_summary["camera_power_off_error"] = str(e)
+            print("Commanding freezer, lamp and camera outputs OFF...")
+            shutdown_record = temp_logger.ensure_safe_outputs_off()
+        except Exception as exc:
+            shutdown_record = {"safe_outputs_off_confirmed": False, "error": str(exc)}
+        test_summary["final_safe_output_shutdown_record"] = shutdown_record
+        test_summary["mcc_connection_status_before_logger_stop"] = temp_logger.get_connection_status()
 
         print("Stopping temperature logger...")
-        temp_logger.stop()
+        try:
+            stop_record = temp_logger.stop()
+            test_summary["logger_stop_safe_output_record"] = stop_record
+            if stop_record is not None:
+                shutdown_record = stop_record
+                test_summary["final_safe_output_shutdown_record"] = stop_record
+        except Exception as exc:
+            shutdown_record = {"safe_outputs_off_confirmed": False, "error": str(exc)}
+            test_summary["final_safe_output_shutdown_record"] = shutdown_record
+        test_summary["mcc_connection_status_after_logger_stop"] = temp_logger.get_connection_status()
+        if not shutdown_record.get("safe_outputs_off_confirmed", False):
+            test_summary["status"] = "unsafe_shutdown"
+            print("CRITICAL: Could not confirm freezer/lamp/camera outputs OFF")
 
-        write_json(summary_path, test_summary)
-        print(f"Final summary written to: {summary_path}")
+        try:
+            write_json(summary_path, test_summary)
+            print(f"Final summary written to: {summary_path}")
+        finally:
+            # A full disk must not turn an unsafe shutdown into an ordinary
+            # repeat failure that REPEAT_CONTINUE_AFTER_FAILURE can bypass.
+            if not shutdown_record.get("safe_outputs_off_confirmed", False):
+                raise UnsafeShutdownError("MCC output shutdown unconfirmed; repeat sequence stopped.")
 
     return test_summary
 
@@ -1022,7 +1052,12 @@ def wait_between_repeats(seconds: float):
         print(f"Repeat delay: {remaining} s remaining")
 
 
+def handle_termination(signum, frame):
+    raise KeyboardInterrupt(f"Termination signal {signum}")
+
+
 def main():
+    signal.signal(signal.SIGTERM, handle_termination)
     repeat_count = max(1, int(REPEAT_TEST_COUNT))
     sequence_start_time = datetime.now()
     repeat_group_id = repeat_group_id_for_start(sequence_start_time)
@@ -1044,8 +1079,8 @@ def main():
         except Exception as e:
             print(f"Repeat {repeat_index} failed: {e}")
 
-            if not REPEAT_CONTINUE_AFTER_FAILURE:
-                print("Stopping repeat sequence because REPEAT_CONTINUE_AFTER_FAILURE is False.")
+            if isinstance(e, UnsafeShutdownError) or not REPEAT_CONTINUE_AFTER_FAILURE:
+                print("Stopping repeat sequence after failure or unconfirmed output shutdown.")
                 break
 
         if repeat_index < repeat_count:

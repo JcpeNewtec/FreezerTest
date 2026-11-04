@@ -349,9 +349,16 @@ def run_single_sweep(
 
             if keepalive_active and CAMERA_KEEPALIVE_RESTART_AFTER_SWEEP:
                 print("Restarting camera keepalive stream after image capture...")
-                sweep_summary["camera_keepalive_stream_events"].append(
-                    camera_keepalive_stream.start(reason=f"after_sweep_{sweep_index:04d}_capture")
+                restart_event = camera_keepalive_stream.start(
+                    reason=f"after_sweep_{sweep_index:04d}_capture"
                 )
+                sweep_summary["camera_keepalive_stream_events"].append(restart_event)
+
+                if not restart_event.get("running", False):
+                    raise RuntimeError(
+                        "Camera keepalive stream failed to restart after image "
+                        f"capture. Event: {restart_event}"
+                    )
 
             print("Reading camera internal temperatures after capture...")
             sweep_summary["camera_internal_temperature_readings"].append(
